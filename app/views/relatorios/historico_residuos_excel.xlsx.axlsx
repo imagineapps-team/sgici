@@ -1,0 +1,145 @@
+# frozen_string_literal: true
+
+wb = xlsx_package.workbook
+
+# Estilos
+header_style = wb.styles.add_style(
+  bg_color: '4472C4',
+  fg_color: 'FFFFFF',
+  b: true,
+  alignment: { horizontal: :center, vertical: :center, wrap_text: true },
+  border: { style: :thin, color: '000000' }
+)
+
+cell_style = wb.styles.add_style(
+  alignment: { vertical: :center },
+  border: { style: :thin, color: 'CCCCCC' }
+)
+
+number_style = wb.styles.add_style(
+  alignment: { horizontal: :right, vertical: :center },
+  border: { style: :thin, color: 'CCCCCC' },
+  format_code: '#,##0.00'
+)
+
+total_style = wb.styles.add_style(
+  bg_color: 'E2EFDA',
+  b: true,
+  alignment: { horizontal: :right, vertical: :center },
+  border: { style: :thin, color: '000000' },
+  format_code: '#,##0.00'
+)
+
+total_text_style = wb.styles.add_style(
+  bg_color: 'E2EFDA',
+  b: true,
+  alignment: { vertical: :center },
+  border: { style: :thin, color: '000000' }
+)
+
+title_style = wb.styles.add_style(
+  b: true,
+  sz: 14,
+  alignment: { horizontal: :center }
+)
+
+wb.add_worksheet(name: 'Historico Residuos') do |sheet|
+  # Titulo
+  sheet.add_row [@titulo], style: title_style
+  sheet.merge_cells('A1:P1') if @modelo == 'RR'
+  sheet.merge_cells('A1:H1') if @modelo == 'RT'
+  sheet.add_row ["Gerado em: #{Time.current.strftime('%d/%m/%Y as %H:%M')}"]
+  sheet.add_row [] # Linha vazia
+
+  if @dados.present?
+    if @modelo == 'RR'
+      # Modelo RR - Residuos da Reciclagem (Detalhado)
+      headers = ['Local', 'Bairro', 'Cidade', 'NUC', 'Titular', 'Codigo', 'Tipologia', 'Residuo', 'Peso (Kg)', 'Bonus (R$)', 'kWh Eco', 'Data', 'Reciclador', 'Placa', 'Doada', 'Doador']
+      sheet.add_row headers, style: header_style
+
+      totais = { peso: 0, bonus: 0, kwheco: 0 }
+
+      @dados.each do |item|
+        peso = item[:rr_total_peso].to_s.gsub('.', '').gsub(',', '.').to_f
+        bonus = item[:rr_total_bonus].to_s.gsub('.', '').gsub(',', '.').to_f
+        kwheco = item[:kwh_eco].to_s.gsub('.', '').gsub(',', '.').to_f
+
+        totais[:peso] += peso
+        totais[:bonus] += bonus
+        totais[:kwheco] += kwheco
+
+        sheet.add_row [
+          item[:local],
+          item[:bairro],
+          item[:cidade],
+          item[:nuc],
+          item[:titular],
+          item[:rec_codigo],
+          item[:recurso_tipo],
+          item[:recurso_nome],
+          peso,
+          bonus,
+          kwheco,
+          item[:rec_data_cadastro],
+          item[:reciclador],
+          item[:placa],
+          item[:rec_doada],
+          item[:doador]
+        ], style: [cell_style, cell_style, cell_style, cell_style, cell_style, cell_style, cell_style, cell_style, number_style, number_style, number_style, cell_style, cell_style, cell_style, cell_style, cell_style]
+      end
+
+      # Totais
+      sheet.add_row [
+        'TOTAL', '', '', '', '', '', '', '',
+        totais[:peso],
+        totais[:bonus],
+        totais[:kwheco],
+        '', '', '', '', ''
+      ], style: [total_text_style, total_text_style, total_text_style, total_text_style, total_text_style, total_text_style, total_text_style, total_text_style, total_style, total_style, total_style, total_text_style, total_text_style, total_text_style, total_text_style, total_text_style]
+
+      # Ajustar largura das colunas
+      sheet.column_widths 15, 15, 15, 12, 25, 15, 15, 20, 12, 12, 12, 18, 20, 10, 8, 25
+
+    else
+      # Modelo RT - Residuos por Tipologia (Agrupado)
+      headers = ['Categoria', 'Mes', 'Local', 'Bairro', 'Cidade', 'Peso (ton)', 'Bonus (R$)', 'kWh Eco']
+      sheet.add_row headers, style: header_style
+
+      totais = { peso: 0, bonus: 0, kwheco: 0 }
+
+      @dados.each do |item|
+        peso = item[:rr_total_peso].to_s.gsub('.', '').gsub(',', '.').to_f
+        bonus = item[:rr_total_bonus].to_s.gsub('.', '').gsub(',', '.').to_f
+        kwheco = item[:kwh_eco].to_s.gsub('.', '').gsub(',', '.').to_f
+
+        totais[:peso] += peso
+        totais[:bonus] += bonus
+        totais[:kwheco] += kwheco
+
+        sheet.add_row [
+          item[:categoria],
+          item[:mes_nome],
+          item[:local],
+          item[:bairro],
+          item[:cidade],
+          peso,
+          bonus,
+          kwheco
+        ], style: [cell_style, cell_style, cell_style, cell_style, cell_style, number_style, number_style, number_style]
+      end
+
+      # Totais
+      sheet.add_row [
+        'TOTAL', '', '', '', '',
+        totais[:peso],
+        totais[:bonus],
+        totais[:kwheco]
+      ], style: [total_text_style, total_text_style, total_text_style, total_text_style, total_text_style, total_style, total_style, total_style]
+
+      # Ajustar largura das colunas
+      sheet.column_widths 20, 18, 20, 15, 15, 12, 12, 12
+    end
+  else
+    sheet.add_row ['Nenhum dado encontrado para os filtros selecionados.']
+  end
+end

@@ -1,0 +1,282 @@
+# Deploy PROD - AVSI EcoEnel / Light
+#
+# Workflow manual para deploy no ambiente PROD.
+# ATENCAO: Este workflow faz deploy em producao!
+#
+# Secrets necessarios:
+#   - RAILS_MASTER_KEY: Master key para build de producao
+#   - EC2_HOST: IP ou hostname do servidor EC2
+#   - EC2_USER: Usuario SSH (geralmente ec2-user ou ubuntu)
+#   - EC2_SSH_KEY: Chave SSH privada (base64 encoded)
+
+name: Deploy PROD
+
+on:
+  workflow_dispatch:
+    inputs:
+      app:
+        description: 'Application to deploy'
+        type: choice
+        options:
+          - ecoenel
+          - light
+          - both
+        default: both
+      skip_tests:
+        description: 'Skip tests'
+        type: boolean
+        default: false
+      skip_build:
+        description: 'Skip build (use existing image)'
+        type: boolean
+        default: false
+      image_tag:
+        description: 'Image tag to deploy (if skip_build)'
+        type: string
+        default: ''
+      confirm_prod:
+        description: 'Type DEPLOY to confirm production deploy'
+        type: string
+        required: true
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+  ENVIRONMENT: prod
+  RUBY_VERSION: '3.4.3'
+  NODE_VERSION: '22'
+
+jobs:
+  # ============================================
+  # JOB: Validate
+  # ============================================
+  validate:
+    name: Validate Production Deploy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check confirmation
+        if: github.event.inputs.confirm_prod != 'DEPLOY'
+        run: |
+          echo "::error::Production deploy not confirmed. Type 'DEPLOY' to confirm."
+          exit 1
+
+  # ============================================
+  # JOB: Test
+  # ============================================
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    needs: [validate]
+    if: github.event.inputs.skip_tests != 'true'
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: avsi_ecoenel_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ env.RUBY_VERSION }}
+          bundler-cache: true
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'yarn'
+
+      - name: Install JS dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Setup database
+        env:
+          RAILS_ENV: test
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/avsi_ecoenel_test
+        run: bin/rails db:schema:load
+
+      - name: Run tests
+        env:
+          RAILS_ENV: test
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/avsi_ecoenel_test
+        run: bin/rails test
+
+  # ============================================
+  # JOB: Build
+  # ============================================
+  build:
+    name: Build & Push
+    runs-on: ubuntu-latest
+    needs: [validate, test]
+    if: always() && needs.validate.result == 'success' && (needs.test.result == 'success' || needs.test.result == 'skipped') && github.event.inputs.skip_build != 'true'
+
+    permissions:
+      contents: read
+      packages: write
+
+    outputs:
+      image_tag: ${{ steps.tag.outputs.tag }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Generate image tag
+        id: tag
+        run: |
+          SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-7)
+          TAG="${{ env.ENVIRONMENT }}-sha-${SHORT_SHA}"
+          echo "tag=${TAG}" >> $GITHUB_OUTPUT
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=${{ steps.tag.outputs.tag }}
+            type=raw,value=${{ env.ENVIRONMENT }}-latest
+            type=raw,value=latest
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            RAILS_MASTER_KEY=${{ secrets.RAILS_MASTER_KEY }}
+
+      - name: Image summary
+        run: |
+          echo "### Docker Image Built (PROD)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Registry:** ${{ env.REGISTRY }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Tag:** ${{ steps.tag.outputs.tag }}" >> $GITHUB_STEP_SUMMARY
+
+  # ============================================
+  # JOB: Deploy
+  # ============================================
+  deploy:
+    name: Deploy PROD
+    runs-on: ubuntu-latest
+    needs: [validate, build]
+    if: always() && needs.validate.result == 'success' && (needs.build.result == 'success' || needs.build.result == 'skipped')
+    environment: production
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.EC2_SSH_KEY }}" | base64 -d > ~/.ssh/ec2_key
+          chmod 600 ~/.ssh/ec2_key
+          ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts 2>/dev/null || true
+
+      - name: Determine image tag
+        id: image
+        run: |
+          if [ "${{ github.event.inputs.skip_build }}" == "true" ] && [ -n "${{ github.event.inputs.image_tag }}" ]; then
+            TAG="${{ github.event.inputs.image_tag }}"
+          else
+            SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-7)
+            TAG="${{ env.ENVIRONMENT }}-sha-${SHORT_SHA}"
+          fi
+          echo "tag=${TAG}" >> $GITHUB_OUTPUT
+
+      - name: Deploy EcoEnel PROD
+        if: github.event.inputs.app == 'ecoenel' || github.event.inputs.app == 'both'
+        env:
+          SSH_HOST: ${{ secrets.EC2_HOST }}
+          SSH_USER: ${{ secrets.EC2_USER }}
+          IMAGE_TAG: ${{ steps.image.outputs.tag }}
+        run: |
+          ssh -i ~/.ssh/ec2_key ${SSH_USER}@${SSH_HOST} << 'ENDSSH'
+            cd /opt/avsi/docker
+
+            # Login no registry
+            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+            # Atualizar TAG_PROD no .env
+            sed -i "s/^TAG_PROD=.*/TAG_PROD=${{ steps.image.outputs.tag }}/" .env
+
+            # Pull e restart
+            docker compose -f docker-compose.prod.yml pull ecoenel-prod
+            docker compose -f docker-compose.prod.yml up -d ecoenel-prod
+
+            # Rodar migrations
+            docker compose -f docker-compose.prod.yml exec -T ecoenel-prod bin/rails db:migrate || echo "No migrations to run"
+
+            # Verificar
+            sleep 5
+            docker compose -f docker-compose.prod.yml ps ecoenel-prod
+          ENDSSH
+
+          echo "### EcoEnel PROD Deployed" >> $GITHUB_STEP_SUMMARY
+          echo "- **Image Tag:** ${{ steps.image.outputs.tag }}" >> $GITHUB_STEP_SUMMARY
+
+      - name: Deploy Light PROD
+        if: github.event.inputs.app == 'light' || github.event.inputs.app == 'both'
+        env:
+          SSH_HOST: ${{ secrets.EC2_HOST }}
+          SSH_USER: ${{ secrets.EC2_USER }}
+          IMAGE_TAG: ${{ steps.image.outputs.tag }}
+        run: |
+          ssh -i ~/.ssh/ec2_key ${SSH_USER}@${SSH_HOST} << 'ENDSSH'
+            cd /opt/avsi/docker
+
+            # Login no registry
+            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin || true
+
+            # Atualizar TAG_PROD no .env
+            sed -i "s/^TAG_PROD=.*/TAG_PROD=${{ steps.image.outputs.tag }}/" .env
+
+            # Pull e restart
+            docker compose -f docker-compose.prod.yml pull light-prod
+            docker compose -f docker-compose.prod.yml up -d light-prod
+
+            # Rodar migrations
+            docker compose -f docker-compose.prod.yml exec -T light-prod bin/rails db:migrate || echo "No migrations to run"
+
+            # Verificar
+            sleep 5
+            docker compose -f docker-compose.prod.yml ps light-prod
+          ENDSSH
+
+          echo "### Light PROD Deployed" >> $GITHUB_STEP_SUMMARY
+          echo "- **Image Tag:** ${{ steps.image.outputs.tag }}" >> $GITHUB_STEP_SUMMARY
+
+      - name: Deploy summary
+        run: |
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "---" >> $GITHUB_STEP_SUMMARY
+          echo "**PROD Deploy completed!**" >> $GITHUB_STEP_SUMMARY

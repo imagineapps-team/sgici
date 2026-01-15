@@ -1,0 +1,175 @@
+# docker-compose.yml
+# Ambiente de desenvolvimento multi-app (MODO SIMPLES)
+#
+# Este arquivo roda as apps em portas diferentes, sem Traefik.
+# Para usar hostnames (ecoenel.localhost), veja docker/README ou docs/infra/README.md
+#
+# USO:
+#   docker compose up -d                    # Sobe tudo
+#   docker compose up avsi-ecoenel -d       # Apenas EcoEnel (SP + CE)
+#   docker compose up avsi-light -d         # Apenas Light
+#   docker compose logs -f avsi-ecoenel     # Ver logs EcoEnel
+#   docker compose logs -f avsi-light       # Ver logs Light
+#
+# ACESSO (por porta, NAO por hostname):
+#   EcoEnel: http://localhost:3000  (SP e CE unificados - seleção no login)
+#   Light:   http://localhost:3001
+#
+# PORTAS:
+#   3000 - EcoEnel Rails (multi-tenant: SP + CE)
+#   3001 - Light Rails
+#   3036 - EcoEnel Vite (HMR)
+#   3037 - Light Vite (HMR)
+#
+# BANCO DE DADOS:
+#   Usa PostgreSQL local (host.docker.internal)
+#   Bancos necessários:
+#     - ecoenel     (EcoEnel SP - default/primary)
+#     - ecoenel_ce  (EcoEnel CE)
+#     - lightrecicla (Light)
+
+services:
+  # ===========================
+  # EcoEnel (Multi-tenant: SP + CE) - Porta 3000
+  # ===========================
+  avsi-ecoenel:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: avsi-ecoenel
+    environment:
+      # Identidade
+      APP_PROFILE: ecoenel
+      APP_NAME: "AVSI - EcoEnel"
+      # Multi-tenancy habilitado (SP + CE)
+      MULTI_TENANT_ENABLED: "true"
+      # Configuração de Tenants (key:label:database)
+      TENANTS_CONFIG: "ecoenel_sp:São Paulo:ecoenel,ecoenel_ce:Ceará:ecoenel_ce_local"
+      # Banco Principal (SP - default)
+      DATABASE_HOST: host.docker.internal
+      DATABASE_NAME: ecoenel
+      DATABASE_USERNAME: postgres
+      DATABASE_PASSWORD: 2611rs
+      # Bancos por Regional (shards)
+      DATABASE_NAME_SP: ecoenel
+      DATABASE_NAME_CE: ecoenel_ce_local
+      # Branding (Azul - compartilhado entre regionais)
+      BRANDING_APP_NAME: "AVSI - EcoEnel"
+      BRANDING_PRIMARY_COLOR: "#006cb6"
+      BRANDING_SECONDARY_COLOR: "#10B981"
+      BRANDING_ACCENT_COLOR: "#F59E0B"
+      BRANDING_FOOTER_TEXT: "© EcoEnel 2025"
+      # Business Policies (compartilhadas entre regionais)
+      DOACAO_RECICLAGEM_POLICY: enabled
+      # Rails
+      RAILS_ENV: development
+      VITE_RUBY_HOST: avsi-ecoenel-vite
+      VITE_RUBY_PORT: 3036
+    volumes:
+      - .:/rails
+      - avsi-ecoenel-bundle:/usr/local/bundle
+      - avsi-ecoenel-node-modules:/rails/node_modules
+    ports:
+      - "3000:3000"
+    networks:
+      - avsi-network
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    command: >
+      bash -c "bundle install &&
+               yarn install &&
+               rm -f tmp/pids/server-ecoenel.pid &&
+               ./bin/rails db:migrate &&
+               ./bin/rails server -b 0.0.0.0 -P tmp/pids/server-ecoenel.pid"
+    tty: true
+    stdin_open: true
+
+  avsi-ecoenel-vite:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: avsi-ecoenel-vite
+    environment:
+      VITE_RUBY_HOST: 0.0.0.0
+    volumes:
+      - .:/rails
+      - avsi-ecoenel-node-modules:/rails/node_modules
+    ports:
+      - "3036:3036"
+    networks:
+      - avsi-network
+    command: yarn vite --host
+
+  # ===========================
+  # Light (Verde - Porta 3001)
+  # ===========================
+  avsi-light:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: avsi-light
+    environment:
+      # Identidade
+      APP_PROFILE: light
+      APP_NAME: "AVSI - Light Recicla"
+      # Banco (PostgreSQL local)
+      DATABASE_HOST: host.docker.internal
+      DATABASE_NAME: lightrecicla
+      DATABASE_USERNAME: postgres
+      DATABASE_PASSWORD: 2611rs
+      # Branding (Verde)
+      BRANDING_APP_NAME: "AVSI - Light Recicla"
+      BRANDING_PRIMARY_COLOR: "#008275"
+      BRANDING_SECONDARY_COLOR: "#4CAF50"
+      BRANDING_ACCENT_COLOR: "#A5D6A7"
+      BRANDING_FOOTER_TEXT: "© Light 2025"
+      # Rails
+      RAILS_ENV: development
+      VITE_RUBY_HOST: avsi-light-vite
+      VITE_RUBY_PORT: 3037
+      PORT: 3001
+    volumes:
+      - .:/rails
+      - avsi-light-bundle:/usr/local/bundle
+      - avsi-light-node-modules:/rails/node_modules
+    ports:
+      - "3001:3001"
+    networks:
+      - avsi-network
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    command: >
+      bash -c "bundle install &&
+               yarn install &&
+               rm -f tmp/pids/server-light.pid &&
+               ./bin/rails db:migrate &&
+               ./bin/rails server -b 0.0.0.0 -p 3001 -P tmp/pids/server-light.pid"
+    tty: true
+    stdin_open: true
+
+  avsi-light-vite:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: avsi-light-vite
+    environment:
+      VITE_RUBY_HOST: 0.0.0.0
+      VITE_RUBY_PORT: 3037
+    volumes:
+      - .:/rails
+      - avsi-light-node-modules:/rails/node_modules
+    ports:
+      - "3037:3037"
+    networks:
+      - avsi-network
+    command: yarn vite --host --port 3037
+
+networks:
+  avsi-network:
+    driver: bridge
+
+volumes:
+  avsi-ecoenel-bundle:
+  avsi-light-bundle:
+  avsi-ecoenel-node-modules:
+  avsi-light-node-modules:

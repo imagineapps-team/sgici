@@ -1,0 +1,33 @@
+{
+  "name": "app",
+  "private": "true",
+  "dependencies": {
+    "@heroicons/vue": "^2.2.0",
+    "@inertiajs/vue3": "^2.3.1",
+    "@tailwindcss/cli": "^4.1.18",
+    "@tailwindcss/forms": "^0.5.10",
+    "@tailwindcss/typography": "^0.5.19",
+    "@tailwindcss/vite": "^4.1.18",
+    "@types/leaflet": "^1.9.21",
+    "@vitejs/plugin-vue": "^6.0.3",
+    "@vueuse/core": "^14.1.0",
+    "axios": "^1.13.2",
+    "date-fns": "^4.1.0",
+    "echarts": "^5.5.1",
+    "leaflet": "^1.9.4",
+    "puppeteer": "^24.33.0",
+    "tailwindcss": "^4.1.18",
+    "typescript": "~5.6.2",
+    "vue": "^3.5.25",
+    "vue-echarts": "^7.0.3",
+    "vue-tsc": "^3.1.8"
+  },
+  "scripts": {
+    "build:css": "npx @tailwindcss/cli -i ./app/assets/stylesheets/application.tailwind.css -o ./app/assets/builds/application.css --minify",
+    "check": "vue-tsc -p tsconfig.app.json && tsc -p tsconfig.node.json"
+  },
+  "devDependencies": {
+    "vite": "^7.3.0",
+    "vite-plugin-ruby": "^5.1.0"
+  }
+}

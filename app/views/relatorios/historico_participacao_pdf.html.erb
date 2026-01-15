@@ -1,0 +1,121 @@
+<%= render partial: 'relatorios/shared/pdf_header', locals: {
+  titulo: @titulo,
+  subtitulo: 'Relatorio de Participacoes em Reciclagens',
+  data_geracao: @data_geracao
+} %>
+
+<% if @dados.present? %>
+  <%
+    totais = {
+      peso: @dados.sum { |d| d[:reciclagens_total_peso].to_s.gsub('.', '').gsub(',', '.').to_f },
+      bonus: @dados.sum { |d| d[:reciclagens_total_valor].to_s.gsub('.', '').gsub(',', '.').to_f },
+      kwheco: @dados.sum { |d| d[:kwheco].to_s.gsub('.', '').gsub(',', '.').to_f }
+    }
+  %>
+
+  <%= render partial: 'relatorios/shared/pdf_summary', locals: {
+    titulo: 'Resumo Geral',
+    items: [
+      { label: 'Total de Registros', value: number_with_delimiter(@dados.length) },
+      { label: 'Peso Total (Kg)', value: number_with_precision(totais[:peso], precision: 2, delimiter: '.', separator: ',') },
+      { label: 'Bonus Total (R$)', value: number_with_precision(totais[:bonus], precision: 2, delimiter: '.', separator: ',') }
+    ]
+  } %>
+
+  <% if @modelo == 'DG' %>
+    <%# Modelo DG - Dados Gerais %>
+    <table>
+      <thead>
+        <tr>
+          <th>Codigo</th>
+          <th>Data</th>
+          <th>NUC</th>
+          <th>Nome</th>
+          <th>Comunidade</th>
+          <th>Tipo</th>
+          <th>Evento</th>
+          <th class="text-right">Peso (Kg)</th>
+          <th class="text-right">Bonus (R$)</th>
+          <th class="text-right">KWh Eco</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @dados.each do |item| %>
+          <tr>
+            <td style="font-family: monospace;"><%= item[:rec_codigo] %></td>
+            <td><%= item[:data_cadastro] %></td>
+            <td><%= item[:nuc] %></td>
+            <td><%= item[:nome] %></td>
+            <td><%= item[:comunidade] %></td>
+            <td><%= item[:tipo] %></td>
+            <td style="font-size: 9px;"><%= item[:evento] %></td>
+            <td class="text-right"><%= item[:reciclagens_total_peso] %></td>
+            <td class="text-right"><%= item[:reciclagens_total_valor] %></td>
+            <td class="text-right"><%= item[:kwheco] %></td>
+            <td>
+              <span class="<%= status_badge_class(item[:status]) %>"><%= item[:status_label] %></span>
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="7"><strong>TOTAL</strong></td>
+          <td class="text-right"><%= number_with_precision(totais[:peso], precision: 2, delimiter: '.', separator: ',') %></td>
+          <td class="text-right"><%= number_with_precision(totais[:bonus], precision: 2, delimiter: '.', separator: ',') %></td>
+          <td class="text-right"><%= number_with_precision(totais[:kwheco], precision: 2, delimiter: '.', separator: ',') %></td>
+          <td></td>
+        </tr>
+      </tfoot>
+    </table>
+
+  <% else %>
+    <%# Modelo AR - Agrupado por Residuo %>
+    <table>
+      <thead>
+        <tr>
+          <th>NUC</th>
+          <th>Nome</th>
+          <th>Comunidade</th>
+          <th>Tipo</th>
+          <th>Residuo</th>
+          <th class="text-right">Peso (Kg)</th>
+          <th class="text-right">Bonus (R$)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @dados.each do |item| %>
+          <tr>
+            <td><%= item[:nuc] %></td>
+            <td><%= item[:nome] %></td>
+            <td><%= item[:comunidade] %></td>
+            <td><%= item[:tipo] %></td>
+            <td><%= item[:residuo] %></td>
+            <td class="text-right"><%= item[:reciclagens_total_peso] %></td>
+            <td class="text-right"><%= item[:reciclagens_total_valor] %></td>
+          </tr>
+        <% end %>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="5"><strong>TOTAL</strong></td>
+          <td class="text-right"><%= number_with_precision(totais[:peso], precision: 2, delimiter: '.', separator: ',') %></td>
+          <td class="text-right"><%= number_with_precision(totais[:bonus], precision: 2, delimiter: '.', separator: ',') %></td>
+        </tr>
+      </tfoot>
+    </table>
+  <% end %>
+
+  <%= render partial: 'relatorios/shared/pdf_footer', locals: {
+    data_geracao: @data_geracao,
+    total_registros: @dados.length
+  } %>
+
+<% else %>
+  <%= render partial: 'relatorios/shared/pdf_no_data' %>
+
+  <%= render partial: 'relatorios/shared/pdf_footer', locals: {
+    data_geracao: @data_geracao
+  } %>
+<% end %>

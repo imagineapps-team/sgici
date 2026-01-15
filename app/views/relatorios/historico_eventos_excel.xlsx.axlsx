@@ -1,0 +1,171 @@
+# frozen_string_literal: true
+
+wb = xlsx_package.workbook
+
+# Estilos
+header_style = wb.styles.add_style(
+  bg_color: '4472C4',
+  fg_color: 'FFFFFF',
+  b: true,
+  alignment: { horizontal: :center, vertical: :center, wrap_text: true },
+  border: { style: :thin, color: '000000' }
+)
+
+cell_style = wb.styles.add_style(
+  alignment: { vertical: :center },
+  border: { style: :thin, color: 'CCCCCC' }
+)
+
+number_style = wb.styles.add_style(
+  alignment: { horizontal: :right, vertical: :center },
+  border: { style: :thin, color: 'CCCCCC' },
+  format_code: '#,##0.00'
+)
+
+integer_style = wb.styles.add_style(
+  alignment: { horizontal: :right, vertical: :center },
+  border: { style: :thin, color: 'CCCCCC' },
+  format_code: '#,##0'
+)
+
+total_style = wb.styles.add_style(
+  bg_color: 'E2EFDA',
+  b: true,
+  alignment: { horizontal: :right, vertical: :center },
+  border: { style: :thin, color: '000000' },
+  format_code: '#,##0.00'
+)
+
+total_integer_style = wb.styles.add_style(
+  bg_color: 'E2EFDA',
+  b: true,
+  alignment: { horizontal: :right, vertical: :center },
+  border: { style: :thin, color: '000000' },
+  format_code: '#,##0'
+)
+
+total_text_style = wb.styles.add_style(
+  bg_color: 'E2EFDA',
+  b: true,
+  alignment: { vertical: :center },
+  border: { style: :thin, color: '000000' }
+)
+
+title_style = wb.styles.add_style(
+  b: true,
+  sz: 14,
+  alignment: { horizontal: :center }
+)
+
+wb.add_worksheet(name: 'Histórico por Ação') do |sheet|
+  # Título
+  sheet.add_row [@titulo], style: title_style
+  sheet.merge_cells('A1:K1')
+  sheet.add_row ["Gerado em: #{Time.current.strftime('%d/%m/%Y às %H:%M')}"]
+  sheet.add_row [] # Linha vazia
+
+  if @dados.present?
+    # Detectar modelo pelo primeiro item
+    primeiro = @dados.first
+
+    if primeiro[:acao].present?
+      # Modelo RT - Resumo Totais
+      headers = ['Ação', 'Local', 'Bairro', 'Cidade', 'Participações', 'Clientes', 'Reciclador', 'MPC', 'Peso (Kg)', 'Bônus (R$)', 'KWh Eco']
+      sheet.add_row headers, style: header_style
+
+      totais = { participantes: 0, clientes: 0, peso: 0, bonus: 0, kwheco: 0 }
+
+      @dados.each do |item|
+        peso = item[:reciclagens_total_peso].to_s.gsub('.', '').gsub(',', '.').to_f
+        bonus = item[:reciclagens_total_valor].to_s.gsub('.', '').gsub(',', '.').to_f
+        kwheco = item[:kwheco].to_s.gsub('.', '').gsub(',', '.').to_f
+
+        totais[:participantes] += item[:participantes_total].to_i
+        totais[:clientes] += item[:participantes_unicos_total].to_i
+        totais[:peso] += peso
+        totais[:bonus] += bonus
+        totais[:kwheco] += kwheco
+
+        sheet.add_row [
+          item[:acao],
+          item[:local_acao],
+          item[:bairro],
+          item[:cidade],
+          item[:participantes_total],
+          item[:participantes_unicos_total],
+          item[:recicladores],
+          item[:mpc],
+          peso,
+          bonus,
+          kwheco
+        ], style: [cell_style, cell_style, cell_style, cell_style, integer_style, integer_style, cell_style, number_style, number_style, number_style, number_style]
+      end
+
+      # Totais
+      sheet.add_row [
+        'TOTAL', '', '', '',
+        totais[:participantes],
+        totais[:clientes],
+        '',
+        '',
+        totais[:peso],
+        totais[:bonus],
+        totais[:kwheco]
+      ], style: [total_text_style, total_text_style, total_text_style, total_text_style, total_integer_style, total_integer_style, total_text_style, total_text_style, total_style, total_style, total_style]
+
+    elsif primeiro[:rec_codigo].present?
+      # Modelo RD - Reciclagens Detalhadas
+      headers = ['Local', 'Código', 'Beneficiário', 'Perfil', 'NUC', 'Peso (Kg)', 'Bônus (R$)', 'Data', 'Status']
+      sheet.add_row headers, style: header_style
+
+      @dados.each do |item|
+        peso = item[:reciclagens_total_peso].to_s.gsub('.', '').gsub(',', '.').to_f
+        bonus = item[:reciclagens_total_valor].to_s.gsub('.', '').gsub(',', '.').to_f
+
+        sheet.add_row [
+          item[:local_acao],
+          item[:rec_codigo],
+          item[:contrato_nome],
+          item[:contrato_tipo],
+          item[:nuc],
+          peso,
+          bonus,
+          item[:data_cadastro],
+          item[:status_label]
+        ], style: [cell_style, cell_style, cell_style, cell_style, cell_style, number_style, number_style, cell_style, cell_style]
+      end
+
+    else
+      # Modelo RML/RMLT - Resumo Mensal
+      has_tipologia = primeiro[:tipologia].present?
+      has_participacoes = primeiro[:participacoes].present?
+
+      headers = ['Ano', 'Mês', 'Local', 'Bairro', 'Cidade']
+      headers << 'Tipologia' if has_tipologia
+      headers << 'Participações' if has_participacoes
+      headers << 'Atendidos' if has_participacoes
+      headers += ['KWh Eco', 'Peso (Kg)', 'Bônus (R$)']
+
+      sheet.add_row headers, style: header_style
+
+      @dados.each do |item|
+        peso = item[:reciclagens_total_peso].to_s.gsub('.', '').gsub(',', '.').to_f
+        bonus = item[:reciclagens_total_valor].to_s.gsub('.', '').gsub(',', '.').to_f
+        kwheco = item[:kwheco].to_s.gsub('.', '').gsub(',', '.').to_f
+
+        row = [item[:ano], item[:mes_nome], item[:local_acao], item[:bairro], item[:cidade]]
+        row << item[:tipologia] if has_tipologia
+        row << item[:participacoes] if has_participacoes
+        row << item[:atendidos] if has_participacoes
+        row += [kwheco, peso, bonus]
+
+        sheet.add_row row
+      end
+    end
+
+    # Ajustar largura das colunas
+    sheet.column_widths(*Array.new(11, 15))
+  else
+    sheet.add_row ['Nenhum dado encontrado para os filtros selecionados.']
+  end
+end

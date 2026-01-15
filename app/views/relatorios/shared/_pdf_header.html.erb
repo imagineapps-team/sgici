@@ -1,0 +1,14 @@
+<%# Parametros: titulo, subtitulo (opcional), data_geracao %>
+<div class="header">
+  <div class="header-logo">AVSI EcoEnel</div>
+  <div class="header-info">
+    Gerado em: <%= data_geracao %>
+  </div>
+</div>
+
+<div class="title">
+  <h1><%= titulo %></h1>
+  <% if defined?(subtitulo) && subtitulo.present? %>
+    <div class="subtitle"><%= subtitulo %></div>
+  <% end %>
+</div>

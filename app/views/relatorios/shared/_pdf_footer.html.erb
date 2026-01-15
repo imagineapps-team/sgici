@@ -1,0 +1,11 @@
+<%# Parametros: data_geracao, total_registros (opcional) %>
+<% if defined?(total_registros) && total_registros.present? %>
+  <p style="font-size: 9px; color: #666; margin-top: 10px;">
+    Total de <%= total_registros %> registro(s)
+  </p>
+<% end %>
+
+<div class="footer">
+  <span>AVSI EcoEnel - Sistema de Gestao de Reciclagem</span>
+  <span><%= data_geracao %></span>
+</div>

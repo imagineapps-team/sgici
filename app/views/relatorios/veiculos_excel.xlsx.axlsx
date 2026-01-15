@@ -1,0 +1,203 @@
+# frozen_string_literal: true
+
+wb = xlsx_package.workbook
+
+# Estilos
+header_style = wb.styles.add_style(
+  bg_color: '4472C4',
+  fg_color: 'FFFFFF',
+  b: true,
+  alignment: { horizontal: :center, vertical: :center, wrap_text: true },
+  border: { style: :thin, color: '000000' }
+)
+
+cell_style = wb.styles.add_style(
+  alignment: { vertical: :center },
+  border: { style: :thin, color: 'CCCCCC' }
+)
+
+number_style = wb.styles.add_style(
+  alignment: { horizontal: :right, vertical: :center },
+  border: { style: :thin, color: 'CCCCCC' },
+  format_code: '#,##0.00'
+)
+
+total_style = wb.styles.add_style(
+  bg_color: 'E2EFDA',
+  b: true,
+  alignment: { horizontal: :right, vertical: :center },
+  border: { style: :thin, color: '000000' },
+  format_code: '#,##0.00'
+)
+
+total_text_style = wb.styles.add_style(
+  bg_color: 'E2EFDA',
+  b: true,
+  alignment: { vertical: :center },
+  border: { style: :thin, color: '000000' }
+)
+
+title_style = wb.styles.add_style(
+  b: true,
+  sz: 14,
+  alignment: { horizontal: :center }
+)
+
+wb.add_worksheet(name: 'Veiculos') do |sheet|
+  # Titulo
+  sheet.add_row [@titulo], style: title_style
+  sheet.add_row ["Gerado em: #{Time.current.strftime('%d/%m/%Y as %H:%M')}"]
+  sheet.add_row [] # Linha vazia
+
+  if @dados.present?
+    totais = { quantidade: 0, bonus: 0 }
+
+    case @modelo
+    when 'RG'
+      # Modelo RG - Geral
+      headers = ['Veiculo', 'Placa', 'Tipo Residuo', 'Local', 'Valor (R$)', 'Qtd (Kg)', 'Data']
+      sheet.add_row headers, style: header_style
+
+      @dados.each do |item|
+        quantidade = item[:quantidade_total].to_s.gsub('.', '').gsub(',', '.').to_f
+        bonus = item[:bonus_total].to_s.gsub('.', '').gsub(',', '.').to_f
+
+        totais[:quantidade] += quantidade
+        totais[:bonus] += bonus
+
+        sheet.add_row [
+          item[:veiculo_tipo],
+          item[:placa],
+          item[:recurso_tipo],
+          item[:local_acao],
+          bonus,
+          quantidade,
+          item[:data_cadastro]
+        ], style: [cell_style, cell_style, cell_style, cell_style, number_style, number_style, cell_style]
+      end
+
+      # Totais
+      sheet.add_row [
+        'TOTAL', '', '', '',
+        totais[:bonus],
+        totais[:quantidade],
+        ''
+      ], style: [total_text_style, total_text_style, total_text_style, total_text_style, total_style, total_style, total_text_style]
+
+      # Merge celulas do total
+      sheet.merge_cells("A#{sheet.rows.length}:D#{sheet.rows.length}")
+
+      # Ajustar largura das colunas
+      sheet.column_widths 20, 12, 20, 25, 15, 15, 15
+
+    when 'RR'
+      # Modelo RR - Por Tipo de Residuo
+      headers = ['Veiculo', 'Placa', 'Tipo Residuo', 'Valor (R$)', 'Qtd (Kg)', 'Data']
+      sheet.add_row headers, style: header_style
+
+      @dados.each do |item|
+        quantidade = item[:quantidade_total].to_s.gsub('.', '').gsub(',', '.').to_f
+        bonus = item[:bonus_total].to_s.gsub('.', '').gsub(',', '.').to_f
+
+        totais[:quantidade] += quantidade
+        totais[:bonus] += bonus
+
+        sheet.add_row [
+          item[:veiculo_tipo],
+          item[:placa],
+          item[:recurso_tipo],
+          bonus,
+          quantidade,
+          item[:data_cadastro]
+        ], style: [cell_style, cell_style, cell_style, number_style, number_style, cell_style]
+      end
+
+      # Totais
+      sheet.add_row [
+        'TOTAL', '', '',
+        totais[:bonus],
+        totais[:quantidade],
+        ''
+      ], style: [total_text_style, total_text_style, total_text_style, total_style, total_style, total_text_style]
+
+      # Merge celulas do total
+      sheet.merge_cells("A#{sheet.rows.length}:C#{sheet.rows.length}")
+
+      # Ajustar largura das colunas
+      sheet.column_widths 20, 12, 20, 15, 15, 15
+
+    when 'RV'
+      # Modelo RV - Por Veiculo
+      headers = ['Veiculo', 'Placa', 'Valor (R$)', 'Qtd (Kg)', 'Data']
+      sheet.add_row headers, style: header_style
+
+      @dados.each do |item|
+        quantidade = item[:quantidade_total].to_s.gsub('.', '').gsub(',', '.').to_f
+        bonus = item[:bonus_total].to_s.gsub('.', '').gsub(',', '.').to_f
+
+        totais[:quantidade] += quantidade
+        totais[:bonus] += bonus
+
+        sheet.add_row [
+          item[:veiculo_tipo],
+          item[:placa],
+          bonus,
+          quantidade,
+          item[:data_cadastro]
+        ], style: [cell_style, cell_style, number_style, number_style, cell_style]
+      end
+
+      # Totais
+      sheet.add_row [
+        'TOTAL', '',
+        totais[:bonus],
+        totais[:quantidade],
+        ''
+      ], style: [total_text_style, total_text_style, total_style, total_style, total_text_style]
+
+      # Merge celulas do total
+      sheet.merge_cells("A#{sheet.rows.length}:B#{sheet.rows.length}")
+
+      # Ajustar largura das colunas
+      sheet.column_widths 20, 12, 15, 15, 15
+
+    when 'RL'
+      # Modelo RL - Por Local
+      headers = ['Veiculo', 'Placa', 'Local', 'Valor (R$)', 'Qtd (Kg)', 'Data']
+      sheet.add_row headers, style: header_style
+
+      @dados.each do |item|
+        quantidade = item[:quantidade_total].to_s.gsub('.', '').gsub(',', '.').to_f
+        bonus = item[:bonus_total].to_s.gsub('.', '').gsub(',', '.').to_f
+
+        totais[:quantidade] += quantidade
+        totais[:bonus] += bonus
+
+        sheet.add_row [
+          item[:veiculo_tipo],
+          item[:placa],
+          item[:local_acao],
+          bonus,
+          quantidade,
+          item[:data_cadastro]
+        ], style: [cell_style, cell_style, cell_style, number_style, number_style, cell_style]
+      end
+
+      # Totais
+      sheet.add_row [
+        'TOTAL', '', '',
+        totais[:bonus],
+        totais[:quantidade],
+        ''
+      ], style: [total_text_style, total_text_style, total_text_style, total_style, total_style, total_text_style]
+
+      # Merge celulas do total
+      sheet.merge_cells("A#{sheet.rows.length}:C#{sheet.rows.length}")
+
+      # Ajustar largura das colunas
+      sheet.column_widths 20, 12, 25, 15, 15, 15
+    end
+  else
+    sheet.add_row ['Nenhum dado encontrado para os filtros selecionados.']
+  end
+end

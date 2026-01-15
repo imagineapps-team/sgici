@@ -1,0 +1,15 @@
+--title "SGICI - Sistema de Gestão de Importações, Custos e Indicadores"
+--markup markdown
+--markup-provider redcarpet
+--output-dir doc/yard
+--protected
+--private
+--hide-void-return
+--no-private
+--plugin yard-activerecord
+app/**/*.rb
+lib/**/*.rb
+- README.md
+- docs/rn.md
+- docs/rf.md
+- docs/rt.md

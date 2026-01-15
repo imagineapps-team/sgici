@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Recibo de Reciclagem</title>
+  <style type="text/css">
+    body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      font-family: Arial, Helvetica, sans-serif;
+      -webkit-text-size-adjust: 100%;
+      -ms-text-size-adjust: 100%;
+    }
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      background-color: #ffffff;
+    }
+    .header {
+      text-align: center;
+      padding: 30px 20px;
+      background-color: #ffffff;
+    }
+    .logo {
+      max-width: 220px;
+      height: auto;
+    }
+    .content {
+      padding: 20px 40px;
+      text-align: center;
+    }
+    .info-text {
+      font-size: 14px;
+      color: #04B4AE;
+      margin: 10px 0;
+    }
+    .info-text b {
+      color: #04B4AE;
+    }
+    .divider {
+      border-top: 1px solid #dddddd;
+      margin: 20px 0;
+    }
+    .section-title {
+      font-size: 16px;
+      color: #000000;
+      margin: 15px 0;
+    }
+    .items-list {
+      list-style-type: disc;
+      text-align: left;
+      padding-left: 40px;
+      color: #333333;
+    }
+    .items-list li {
+      margin: 5px 0;
+      font-size: 14px;
+    }
+    .highlight {
+      font-size: 18px;
+      color: #000000;
+      margin: 10px 0;
+    }
+    .planet-thanks {
+      font-size: 22px;
+      color: #04B4AE;
+      margin: 20px 0;
+    }
+    .survey-text {
+      font-size: 14px;
+      color: #000000;
+      margin: 15px 0;
+    }
+    .footer {
+      background-color: #262626;
+      padding: 20px;
+      color: #ffffff;
+    }
+    .footer p {
+      font-size: 14px;
+      line-height: 22px;
+      margin: 10px 0;
+    }
+    .footer a {
+      color: #04B4AE;
+      text-decoration: none;
+    }
+    @media only screen and (max-width: 480px) {
+      .container {
+        width: 100% !important;
+      }
+      .content {
+        padding: 20px !important;
+      }
+    }
+  </style>
+</head>
+<body style="background-color: #f4f4f4; padding: 20px 0;">
+  <table width="100%" border="0" cellspacing="0" cellpadding="0">
+    <tr>
+      <td align="center">
+        <table class="container" width="600" border="0" cellspacing="0" cellpadding="0">
+          <!-- Header com Logo -->
+          <tr>
+            <td class="header">
+              <img src="<%= ENV.fetch('APP_URL', 'http://ecoenel.avsi.eco.br') %>/img/logo-light-recicla.jpg"
+                   alt="Ecoenel" class="logo" width="220" />
+            </td>
+          </tr>
+
+          <!-- Conteudo Principal -->
+          <tr>
+            <td class="content">
+              <p class="info-text">
+                Reciclagem Nº <b><%= @reciclagem.codigo %></b><br />
+                foi recebida com sucesso!
+              </p>
+
+              <p class="info-text">
+                Beneficiário: <b><%= @cliente&.nome %></b>
+              </p>
+
+              <p class="info-text">
+                Local: <b><%= @evento&.comunidade&.nome %></b>
+              </p>
+
+              <div class="divider"></div>
+
+              <p class="section-title">Itens reciclados</p>
+
+              <ul class="items-list">
+                <% @recursos.each do |recurso| %>
+                  <li><%= recurso.recurso&.nome %>: <%= number_with_precision(recurso.quantidade, precision: 2) %></li>
+                <% end %>
+              </ul>
+
+              <div class="divider"></div>
+
+              <p class="highlight">
+                Realizada em <b><%= @reciclagem.data_cadastro&.strftime('%d/%m/%Y às %H:%M') %></b>
+              </p>
+
+              <p class="highlight">
+                Total do bônus: <b><%= number_to_currency(@reciclagem.bonus_total || 0, unit: 'R$ ', separator: ',', delimiter: '.') %></b>
+              </p>
+
+              <div class="divider"></div>
+
+              <p class="planet-thanks">O Planeta Agradece!</p>
+
+              <div class="divider"></div>
+
+              <p class="survey-text">
+                Responda nossa pesquisa de satisfação no App Ecoenel
+              </p>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td class="footer">
+              <p>
+                Você está recebendo esta mensagem porque optou pelo recibo via e-mail
+                como comprovante de sua reciclagem no projeto Ecoenel.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

@@ -1,0 +1,155 @@
+# AVSI Multi-App - Docker Compose (Producao)
+#
+# Deploy de todos os ambientes em uma unica EC2.
+# O Nginx existente roteia para as portas internas.
+#
+# USO:
+#   docker compose -f docker-compose.prod.yml --env-file .env up -d
+#   docker compose -f docker-compose.prod.yml --env-file .env up -d ecoenel-prod light-prod
+#
+# PORTAS:
+#   EcoEnel: dev=3010, stage=3011, prod=3012
+#   Light:   dev=3020, stage=3021, prod=3022
+
+services:
+  # ===========================
+  # EcoEnel - DEV
+  # ===========================
+  ecoenel-dev:
+    image: ${REGISTRY:-ghcr.io/org}/avsi-ecoenel:${TAG_DEV:-latest}
+    container_name: ecoenel-dev
+    restart: unless-stopped
+    env_file:
+      - ./envs/ecoenel.dev.env
+    environment:
+      - APP_PROFILE=ecoenel
+      - RAILS_ENV=production
+    ports:
+      - "3010:3000"
+    networks:
+      - avsi-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/up"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # ===========================
+  # EcoEnel - STAGE
+  # ===========================
+  ecoenel-stage:
+    image: ${REGISTRY:-ghcr.io/org}/avsi-ecoenel:${TAG_STAGE:-latest}
+    container_name: ecoenel-stage
+    restart: unless-stopped
+    env_file:
+      - ./envs/ecoenel.stage.env
+    environment:
+      - APP_PROFILE=ecoenel
+      - RAILS_ENV=production
+    ports:
+      - "3011:3000"
+    networks:
+      - avsi-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/up"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # ===========================
+  # EcoEnel - PROD
+  # ===========================
+  ecoenel-prod:
+    image: ${REGISTRY:-ghcr.io/org}/avsi-ecoenel:${TAG_PROD:-latest}
+    container_name: ecoenel-prod
+    restart: unless-stopped
+    env_file:
+      - ./envs/ecoenel.prod.env
+    environment:
+      - APP_PROFILE=ecoenel
+      - RAILS_ENV=production
+    ports:
+      - "3012:3000"
+    networks:
+      - avsi-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/up"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # ===========================
+  # Light - DEV
+  # ===========================
+  light-dev:
+    image: ${REGISTRY:-ghcr.io/org}/avsi-ecoenel:${TAG_DEV:-latest}
+    container_name: light-dev
+    restart: unless-stopped
+    env_file:
+      - ./envs/light.dev.env
+    environment:
+      - APP_PROFILE=light
+      - RAILS_ENV=production
+    ports:
+      - "3020:3000"
+    networks:
+      - avsi-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/up"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # ===========================
+  # Light - STAGE
+  # ===========================
+  light-stage:
+    image: ${REGISTRY:-ghcr.io/org}/avsi-ecoenel:${TAG_STAGE:-latest}
+    container_name: light-stage
+    restart: unless-stopped
+    env_file:
+      - ./envs/light.stage.env
+    environment:
+      - APP_PROFILE=light
+      - RAILS_ENV=production
+    ports:
+      - "3021:3000"
+    networks:
+      - avsi-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/up"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # ===========================
+  # Light - PROD
+  # ===========================
+  light-prod:
+    image: ${REGISTRY:-ghcr.io/org}/avsi-ecoenel:${TAG_PROD:-latest}
+    container_name: light-prod
+    restart: unless-stopped
+    env_file:
+      - ./envs/light.prod.env
+    environment:
+      - APP_PROFILE=light
+      - RAILS_ENV=production
+    ports:
+      - "3022:3000"
+    networks:
+      - avsi-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/up"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+networks:
+  avsi-network:
+    driver: bridge

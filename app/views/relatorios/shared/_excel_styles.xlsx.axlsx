@@ -1,0 +1,100 @@
+# frozen_string_literal: true
+# Estilos compartilhados para relatorios Excel
+# Uso: <% render partial: 'relatorios/shared/excel_styles', locals: { wb: wb } %>
+
+# Header da tabela (azul com texto branco)
+header_style = wb.styles.add_style(
+  bg_color: '4472C4',
+  fg_color: 'FFFFFF',
+  b: true,
+  alignment: { horizontal: :center, vertical: :center, wrap_text: true },
+  border: { style: :thin, color: '000000' }
+)
+
+# Celula de texto padrao
+cell_style = wb.styles.add_style(
+  alignment: { vertical: :center },
+  border: { style: :thin, color: 'CCCCCC' }
+)
+
+# Celula numerica com 2 decimais
+number_style = wb.styles.add_style(
+  alignment: { horizontal: :right, vertical: :center },
+  border: { style: :thin, color: 'CCCCCC' },
+  format_code: '#,##0.00'
+)
+
+# Celula numerica inteira
+integer_style = wb.styles.add_style(
+  alignment: { horizontal: :right, vertical: :center },
+  border: { style: :thin, color: 'CCCCCC' },
+  format_code: '#,##0'
+)
+
+# Linha de total (fundo verde claro)
+total_style = wb.styles.add_style(
+  bg_color: 'E2EFDA',
+  b: true,
+  alignment: { horizontal: :right, vertical: :center },
+  border: { style: :thin, color: '000000' },
+  format_code: '#,##0.00'
+)
+
+# Linha de total - inteiro
+total_integer_style = wb.styles.add_style(
+  bg_color: 'E2EFDA',
+  b: true,
+  alignment: { horizontal: :right, vertical: :center },
+  border: { style: :thin, color: '000000' },
+  format_code: '#,##0'
+)
+
+# Linha de total - texto
+total_text_style = wb.styles.add_style(
+  bg_color: 'E2EFDA',
+  b: true,
+  alignment: { vertical: :center },
+  border: { style: :thin, color: '000000' }
+)
+
+# Titulo do relatorio
+title_style = wb.styles.add_style(
+  b: true,
+  sz: 14,
+  alignment: { horizontal: :center }
+)
+
+# Subtitulo / info
+subtitle_style = wb.styles.add_style(
+  sz: 10,
+  fg_color: '666666',
+  alignment: { horizontal: :center }
+)
+
+# Data/hora
+date_style = wb.styles.add_style(
+  alignment: { horizontal: :center, vertical: :center },
+  border: { style: :thin, color: 'CCCCCC' },
+  format_code: 'dd/mm/yyyy'
+)
+
+datetime_style = wb.styles.add_style(
+  alignment: { horizontal: :center, vertical: :center },
+  border: { style: :thin, color: 'CCCCCC' },
+  format_code: 'dd/mm/yyyy hh:mm'
+)
+
+# Retorna hash com todos os estilos
+{
+  header: header_style,
+  cell: cell_style,
+  number: number_style,
+  integer: integer_style,
+  total: total_style,
+  total_integer: total_integer_style,
+  total_text: total_text_style,
+  title: title_style,
+  subtitle: subtitle_style,
+  date: date_style,
+  datetime: datetime_style
+}

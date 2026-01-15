@@ -1,0 +1,151 @@
+<%= render partial: 'relatorios/shared/pdf_header', locals: {
+  titulo: @titulo,
+  subtitulo: 'Relatorio de Campanhas',
+  data_geracao: @data_geracao
+} %>
+
+<% if @dados.present? %>
+  <% if @modelo == 'RT' %>
+    <%# Modelo RT - Resumo de Totais %>
+    <%
+      total_participantes = @dados.sum { |d| d[:total].to_i }
+    %>
+
+    <%= render partial: 'relatorios/shared/pdf_summary', locals: {
+      titulo: 'Resumo Geral',
+      items: [
+        { label: 'Total de Campanhas', value: number_with_delimiter(@dados.length) },
+        { label: 'Total de Participantes', value: number_with_delimiter(total_participantes) }
+      ]
+    } %>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Campanha</th>
+          <th>Data Inicial</th>
+          <th>Data Final</th>
+          <th class="text-right">Participantes</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @dados.each do |item| %>
+          <tr>
+            <td><%= item[:campanha] %></td>
+            <td><%= item[:dt_ini] %></td>
+            <td><%= item[:dt_fim] %></td>
+            <td class="text-right"><%= number_with_delimiter(item[:total]) %></td>
+          </tr>
+        <% end %>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="3"><strong>TOTAL</strong></td>
+          <td class="text-right"><%= number_with_delimiter(total_participantes) %></td>
+        </tr>
+      </tfoot>
+    </table>
+
+  <% elsif @modelo == 'PD' %>
+    <%# Modelo PD - Participantes x Data %>
+    <%= render partial: 'relatorios/shared/pdf_summary', locals: {
+      titulo: 'Resumo Geral',
+      items: [
+        { label: 'Total de Registros', value: number_with_delimiter(@dados.length) }
+      ]
+    } %>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Campanha</th>
+          <th>NUC</th>
+          <th>Titular</th>
+          <th>Celular</th>
+          <th>E-mail</th>
+          <th>Local</th>
+          <th>Data</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @dados.each do |item| %>
+          <tr>
+            <td><%= item[:campanha] %></td>
+            <td><%= item[:nuc] %></td>
+            <td><%= item[:titular] %></td>
+            <td><%= item[:celular] %></td>
+            <td><%= item[:email] %></td>
+            <td><%= item[:local] %></td>
+            <td><%= item[:data] %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+
+  <% else %>
+    <%# Modelo TP - Totais por Participante %>
+    <%
+      totais = {
+        peso: @dados.sum { |d| d[:total_peso].to_s.gsub('.', '').gsub(',', '.').to_f },
+        bonus: @dados.sum { |d| d[:total_bonus].to_s.gsub('.', '').gsub(',', '.').to_f }
+      }
+    %>
+
+    <%= render partial: 'relatorios/shared/pdf_summary', locals: {
+      titulo: 'Resumo Geral',
+      items: [
+        { label: 'Total de Registros', value: number_with_delimiter(@dados.length) },
+        { label: 'Peso Total (KG)', value: number_with_precision(totais[:peso], precision: 2, delimiter: '.', separator: ',') },
+        { label: 'Bonus Total (R$)', value: number_with_precision(totais[:bonus], precision: 2, delimiter: '.', separator: ',') }
+      ]
+    } %>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Campanha</th>
+          <th>Local</th>
+          <th>NUC</th>
+          <th>Titular</th>
+          <th>Telefone</th>
+          <th>Recurso</th>
+          <th class="text-right">Peso (KG)</th>
+          <th class="text-right">Bonus (R$)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @dados.each do |item| %>
+          <tr>
+            <td><%= item[:campanha] %></td>
+            <td><%= item[:local] %></td>
+            <td><%= item[:nuc] %></td>
+            <td><%= item[:titular] %></td>
+            <td><%= item[:telefone] %></td>
+            <td><%= item[:nome_recurso] %></td>
+            <td class="text-right"><%= item[:total_peso] %></td>
+            <td class="text-right"><%= item[:total_bonus] %></td>
+          </tr>
+        <% end %>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="6"><strong>TOTAL</strong></td>
+          <td class="text-right"><%= number_with_precision(totais[:peso], precision: 2, delimiter: '.', separator: ',') %></td>
+          <td class="text-right"><%= number_with_precision(totais[:bonus], precision: 2, delimiter: '.', separator: ',') %></td>
+        </tr>
+      </tfoot>
+    </table>
+  <% end %>
+
+  <%= render partial: 'relatorios/shared/pdf_footer', locals: {
+    data_geracao: @data_geracao,
+    total_registros: @dados.length
+  } %>
+
+<% else %>
+  <%= render partial: 'relatorios/shared/pdf_no_data' %>
+
+  <%= render partial: 'relatorios/shared/pdf_footer', locals: {
+    data_geracao: @data_geracao
+  } %>
+<% end %>

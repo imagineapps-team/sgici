@@ -1,0 +1,87 @@
+# frozen_string_literal: true
+
+wb = xlsx_package.workbook
+
+# Estilos
+header_style = wb.styles.add_style(
+  bg_color: '4472C4',
+  fg_color: 'FFFFFF',
+  b: true,
+  alignment: { horizontal: :center, vertical: :center, wrap_text: true },
+  border: { style: :thin, color: '000000' }
+)
+
+cell_style = wb.styles.add_style(
+  alignment: { vertical: :center },
+  border: { style: :thin, color: 'CCCCCC' }
+)
+
+number_style = wb.styles.add_style(
+  alignment: { horizontal: :right, vertical: :center },
+  border: { style: :thin, color: 'CCCCCC' },
+  format_code: '#,##0.00'
+)
+
+total_style = wb.styles.add_style(
+  bg_color: 'E2EFDA',
+  b: true,
+  alignment: { horizontal: :right, vertical: :center },
+  border: { style: :thin, color: '000000' },
+  format_code: '#,##0.00'
+)
+
+total_text_style = wb.styles.add_style(
+  bg_color: 'E2EFDA',
+  b: true,
+  alignment: { vertical: :center },
+  border: { style: :thin, color: '000000' }
+)
+
+title_style = wb.styles.add_style(
+  b: true,
+  sz: 14,
+  alignment: { horizontal: :center }
+)
+
+wb.add_worksheet(name: 'Reciclador por Evento') do |sheet|
+  # Titulo
+  sheet.add_row [@titulo], style: title_style
+  sheet.merge_cells('A1:E1')
+  sheet.add_row ["Gerado em: #{Time.current.strftime('%d/%m/%Y as %H:%M')}"]
+  sheet.add_row [] # Linha vazia
+
+  if @dados.present?
+    # Headers
+    headers = ['Reciclador', 'Evento', 'Residuo', 'Qtd Coletado (Kg)', 'Valor (R$)']
+    sheet.add_row headers, style: header_style
+
+    # Dados
+    @dados.each do |item|
+      qtd = item[:qtd_coletado].to_s.gsub('.', '').gsub(',', '.').to_f
+      valor = item[:valor].to_s.gsub('.', '').gsub(',', '.').to_f
+
+      sheet.add_row [
+        item[:reciclador],
+        item[:evento],
+        item[:residuo],
+        qtd,
+        valor
+      ], style: [cell_style, cell_style, cell_style, number_style, number_style]
+    end
+
+    # Totais
+    qtd_total = @totais[:qtd_coletado].to_s.gsub('.', '').gsub(',', '.').to_f
+    valor_total = @totais[:valor].to_s.gsub('.', '').gsub(',', '.').to_f
+
+    sheet.add_row [
+      'TOTAL', '', '',
+      qtd_total,
+      valor_total
+    ], style: [total_text_style, total_text_style, total_text_style, total_style, total_style]
+
+    # Ajustar largura das colunas
+    sheet.column_widths 25, 40, 25, 18, 15
+  else
+    sheet.add_row ['Nenhum dado encontrado para os filtros selecionados.']
+  end
+end

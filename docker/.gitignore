@@ -1,0 +1,12 @@
+# Ignorar arquivos sensiveis
+.env
+
+# Envs por ambiente (tem credenciais)
+envs/*.env
+!envs/*.env.example
+
+# Dumps de banco
+*.sql
+
+# Manter exemplos
+!.env.example

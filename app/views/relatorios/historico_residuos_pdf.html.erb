@@ -1,0 +1,129 @@
+<%= render partial: 'relatorios/shared/pdf_header', locals: {
+  titulo: @titulo,
+  subtitulo: 'Relatorio de Residuos Coletados',
+  data_geracao: @data_geracao
+} %>
+
+<% if @dados.present? %>
+  <%
+    totais = {
+      peso: @dados.sum { |d| d[:rr_total_peso].to_s.gsub('.', '').gsub(',', '.').to_f },
+      bonus: @dados.sum { |d| d[:rr_total_bonus].to_s.gsub('.', '').gsub(',', '.').to_f },
+      kwheco: @dados.sum { |d| d[:kwh_eco].to_s.gsub('.', '').gsub(',', '.').to_f }
+    }
+  %>
+
+  <%= render partial: 'relatorios/shared/pdf_summary', locals: {
+    titulo: 'Resumo Geral',
+    items: [
+      { label: 'Total de Registros', value: number_with_delimiter(@dados.length) },
+      { label: @modelo == 'RT' ? 'Peso Total (ton)' : 'Peso Total (Kg)', value: number_with_precision(totais[:peso], precision: 2, delimiter: '.', separator: ',') },
+      { label: 'Bonus Total (R$)', value: number_with_precision(totais[:bonus], precision: 2, delimiter: '.', separator: ',') },
+      { label: 'kWh Eco Total', value: number_with_precision(totais[:kwheco], precision: 2, delimiter: '.', separator: ',') }
+    ]
+  } %>
+
+  <% if @modelo == 'RR' %>
+    <%# Modelo RR - Residuos da Reciclagem (Detalhado) %>
+    <table>
+      <thead>
+        <tr>
+          <th>Local</th>
+          <th>NUC</th>
+          <th>Titular</th>
+          <th>Codigo</th>
+          <th>Tipologia</th>
+          <th>Residuo</th>
+          <th class="text-right">Peso (Kg)</th>
+          <th class="text-right">Bonus (R$)</th>
+          <th class="text-right">kWh Eco</th>
+          <th>Data</th>
+          <th>Doada</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @dados.each do |item| %>
+          <tr>
+            <td style="font-size: 9px;"><%= item[:local] %></td>
+            <td><%= item[:nuc] %></td>
+            <td style="font-size: 9px;"><%= item[:titular] %></td>
+            <td style="font-family: monospace; font-size: 9px;"><%= item[:rec_codigo] %></td>
+            <td style="font-size: 9px;"><%= item[:recurso_tipo] %></td>
+            <td style="font-size: 9px;"><%= item[:recurso_nome] %></td>
+            <td class="text-right"><%= item[:rr_total_peso] %></td>
+            <td class="text-right"><%= item[:rr_total_bonus] %></td>
+            <td class="text-right"><%= item[:kwh_eco] %></td>
+            <td style="font-size: 9px;"><%= item[:rec_data_cadastro] %></td>
+            <td>
+              <% if item[:rec_doada] == 'SIM' %>
+                <span style="color: green; font-weight: bold;">SIM</span>
+              <% else %>
+                NAO
+              <% end %>
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="6"><strong>TOTAL</strong></td>
+          <td class="text-right"><%= number_with_precision(totais[:peso], precision: 2, delimiter: '.', separator: ',') %></td>
+          <td class="text-right"><%= number_with_precision(totais[:bonus], precision: 2, delimiter: '.', separator: ',') %></td>
+          <td class="text-right"><%= number_with_precision(totais[:kwheco], precision: 2, delimiter: '.', separator: ',') %></td>
+          <td colspan="2"></td>
+        </tr>
+      </tfoot>
+    </table>
+
+  <% else %>
+    <%# Modelo RT - Residuos por Tipologia (Agrupado) %>
+    <table>
+      <thead>
+        <tr>
+          <th>Categoria</th>
+          <th>Mes</th>
+          <th>Local</th>
+          <th>Bairro</th>
+          <th>Cidade</th>
+          <th class="text-right">Peso (ton)</th>
+          <th class="text-right">Bonus (R$)</th>
+          <th class="text-right">kWh Eco</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @dados.each do |item| %>
+          <tr>
+            <td><%= item[:categoria] %></td>
+            <td><%= item[:mes_nome] %></td>
+            <td><%= item[:local] %></td>
+            <td><%= item[:bairro] %></td>
+            <td><%= item[:cidade] %></td>
+            <td class="text-right"><%= item[:rr_total_peso] %></td>
+            <td class="text-right"><%= item[:rr_total_bonus] %></td>
+            <td class="text-right"><%= item[:kwh_eco] %></td>
+          </tr>
+        <% end %>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="5"><strong>TOTAL</strong></td>
+          <td class="text-right"><%= number_with_precision(totais[:peso], precision: 2, delimiter: '.', separator: ',') %></td>
+          <td class="text-right"><%= number_with_precision(totais[:bonus], precision: 2, delimiter: '.', separator: ',') %></td>
+          <td class="text-right"><%= number_with_precision(totais[:kwheco], precision: 2, delimiter: '.', separator: ',') %></td>
+        </tr>
+      </tfoot>
+    </table>
+  <% end %>
+
+  <%= render partial: 'relatorios/shared/pdf_footer', locals: {
+    data_geracao: @data_geracao,
+    total_registros: @dados.length
+  } %>
+
+<% else %>
+  <%= render partial: 'relatorios/shared/pdf_no_data' %>
+
+  <%= render partial: 'relatorios/shared/pdf_footer', locals: {
+    data_geracao: @data_geracao
+  } %>
+<% end %>

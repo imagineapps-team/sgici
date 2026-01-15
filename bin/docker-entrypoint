@@ -1,0 +1,10 @@
+#!/bin/bash -e
+
+# If running the rails server then migrate existing database
+# Usando db:migrate ao invés de db:prepare para ser mais tolerante
+# com bancos restaurados de dump
+if [ "${@: -2:1}" == "./bin/rails" ] && [ "${@: -1:1}" == "server" ]; then
+  ./bin/rails db:migrate 2>/dev/null || echo "Migration skipped or already up to date"
+fi
+
+exec "${@}"

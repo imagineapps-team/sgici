@@ -1,0 +1,96 @@
+<%= render partial: 'relatorios/shared/pdf_header', locals: {
+  titulo: @titulo,
+  subtitulo: 'Relatorio de Fatura por Reciclador',
+  data_geracao: @data_geracao
+} %>
+
+<% if @dados.present? %>
+  <%
+    totais = {
+      peso: @dados.sum { |d| d[:total_peso].to_s.gsub('.', '').gsub(',', '.').to_f },
+      valor: @dados.sum { |d| d[:total_valor].to_s.gsub('.', '').gsub(',', '.').to_f }
+    }
+  %>
+
+  <%= render partial: 'relatorios/shared/pdf_summary', locals: {
+    titulo: 'Resumo Geral',
+    items: [
+      { label: 'Total de Registros', value: number_with_delimiter(@dados.length) },
+      { label: 'Peso Total (KG)', value: number_with_precision(totais[:peso], precision: 2, delimiter: '.', separator: ',') },
+      { label: 'Custo Total (R$)', value: number_with_precision(totais[:valor], precision: 2, delimiter: '.', separator: ',') }
+    ]
+  } %>
+
+  <% if @modelo == 'TR' %>
+    <%# Modelo TR - Total por Residuo %>
+    <table>
+      <thead>
+        <tr>
+          <th>Reciclador</th>
+          <th>Residuo</th>
+          <th class="text-right">Peso (KG)</th>
+          <th class="text-right">Custo (R$)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @dados.each do |item| %>
+          <tr>
+            <td><%= item[:reciclador] %></td>
+            <td><%= item[:residuo] %></td>
+            <td class="text-right"><%= item[:total_peso] %></td>
+            <td class="text-right"><%= item[:total_valor] %></td>
+          </tr>
+        <% end %>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2"><strong>TOTAL</strong></td>
+          <td class="text-right"><%= number_with_precision(totais[:peso], precision: 2, delimiter: '.', separator: ',') %></td>
+          <td class="text-right"><%= number_with_precision(totais[:valor], precision: 2, delimiter: '.', separator: ',') %></td>
+        </tr>
+      </tfoot>
+    </table>
+
+  <% else %>
+    <%# Modelo RC - Repasse a Concessionaria %>
+    <table>
+      <thead>
+        <tr>
+          <th>Acao</th>
+          <th>Local</th>
+          <th class="text-right">Peso (KG)</th>
+          <th class="text-right">Custo (R$)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @dados.each do |item| %>
+          <tr>
+            <td><%= item[:acao_nome] %></td>
+            <td><%= item[:local_acao] %></td>
+            <td class="text-right"><%= item[:total_peso] %></td>
+            <td class="text-right"><%= item[:total_valor] %></td>
+          </tr>
+        <% end %>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2"><strong>TOTAL</strong></td>
+          <td class="text-right"><%= number_with_precision(totais[:peso], precision: 2, delimiter: '.', separator: ',') %></td>
+          <td class="text-right"><%= number_with_precision(totais[:valor], precision: 2, delimiter: '.', separator: ',') %></td>
+        </tr>
+      </tfoot>
+    </table>
+  <% end %>
+
+  <%= render partial: 'relatorios/shared/pdf_footer', locals: {
+    data_geracao: @data_geracao,
+    total_registros: @dados.length
+  } %>
+
+<% else %>
+  <%= render partial: 'relatorios/shared/pdf_no_data' %>
+
+  <%= render partial: 'relatorios/shared/pdf_footer', locals: {
+    data_geracao: @data_geracao
+  } %>
+<% end %>

@@ -1,0 +1,358 @@
+# =============================================================================
+# Deploy SANDBOX - AVSI EcoEnel
+# =============================================================================
+# Workflow para deploy no ambiente SANDBOX com versionamento beta automatico.
+# Usa Tailscale para acesso SSH às VMs.
+#
+# Uso: gh workflow run "Deploy SANDBOX" --field version=1.0.0
+#
+# Secrets necessarios:
+#   - RAILS_MASTER_KEY: Master key para build
+#   - TS_OAUTH_CLIENT_ID: Tailscale OAuth Client ID
+#   - TS_OAUTH_SECRET: Tailscale OAuth Secret
+#   - SANDBOX_ENV: Arquivo .env sandbox (base64 encoded)
+#   - DISCORD_WEBHOOK_URL: Webhook do Discord para notificações
+# =============================================================================
+
+name: "🏗️ Deploy SANDBOX"
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Versao base (ex: 1.0.0) - sufixo beta.N automatico'
+        required: true
+        default: '1.0.0'
+      skip_tests:
+        description: 'Skip tests'
+        type: boolean
+        default: false
+      skip_build:
+        description: 'Skip build (usar imagem existente)'
+        type: boolean
+        default: false
+      image_tag:
+        description: 'Tag da imagem (se skip_build)'
+        type: string
+        default: ''
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+  ENVIRONMENT: sandbox
+  DEPLOY_PATH: /opt/avsi
+  DEPLOY_HOST: ecoenel  # hostname no Tailscale
+  RUBY_VERSION: '3.4.3'
+  NODE_VERSION: '22'
+
+jobs:
+  # ===========================================================================
+  # Preparar versao
+  # ===========================================================================
+  prepare:
+    name: "🔍 Preparar"
+    runs-on: ubuntu-latest
+    outputs:
+      final_version: ${{ steps.version.outputs.final_version }}
+      image_tag: ${{ steps.version.outputs.image_tag }}
+
+    steps:
+      - name: "📥 Checkout"
+        uses: actions/checkout@v4
+        with:
+          fetch-tags: true
+          fetch-depth: 0
+
+      - name: "🏷️ Calcular versao"
+        id: version
+        run: |
+          BASE_VERSION="${{ github.event.inputs.version }}"
+
+          if [ "${{ github.event.inputs.skip_build }}" == "true" ] && [ -n "${{ github.event.inputs.image_tag }}" ]; then
+            FINAL_VERSION="${{ github.event.inputs.image_tag }}"
+          else
+            git fetch --tags --quiet 2>/dev/null || true
+            tags=$(git tag -l "v${BASE_VERSION}-beta.*" 2>/dev/null | sort -V)
+
+            if [ -z "$tags" ]; then
+              NEXT=1
+            else
+              last=$(echo "$tags" | tail -1)
+              current=$(echo "$last" | grep -oE '[0-9]+$')
+              NEXT=$((current + 1))
+            fi
+
+            FINAL_VERSION="${BASE_VERSION}-beta.${NEXT}"
+          fi
+
+          IMAGE_TAG="sandbox-${FINAL_VERSION}"
+
+          echo "final_version=$FINAL_VERSION" >> $GITHUB_OUTPUT
+          echo "image_tag=$IMAGE_TAG" >> $GITHUB_OUTPUT
+
+          echo "════════════════════════════════════════"
+          echo "  Versao: $FINAL_VERSION"
+          echo "  Tag: $IMAGE_TAG"
+          echo "════════════════════════════════════════"
+
+  # ===========================================================================
+  # Test
+  # ===========================================================================
+  test:
+    name: "🧪 Test"
+    runs-on: ubuntu-latest
+    if: github.event.inputs.skip_tests != 'true'
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: avsi_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ env.RUBY_VERSION }}
+          bundler-cache: true
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'yarn'
+
+      - run: yarn install --frozen-lockfile
+
+      - name: "🗃️ Setup database"
+        env:
+          RAILS_ENV: test
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/avsi_test
+        run: bin/rails db:schema:load
+
+      - name: "🧪 Run tests"
+        env:
+          RAILS_ENV: test
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/avsi_test
+        run: bin/rails test
+
+  # ===========================================================================
+  # Build & Push
+  # ===========================================================================
+  build:
+    name: "🐳 Build"
+    runs-on: ubuntu-latest
+    needs: [prepare, test]
+    if: |
+      always() &&
+      (needs.test.result == 'success' || needs.test.result == 'skipped') &&
+      github.event.inputs.skip_build != 'true'
+
+    permissions:
+      contents: write
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: "🏷️ Metadata"
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=${{ needs.prepare.outputs.image_tag }}
+            type=raw,value=sandbox-latest
+
+      - name: "🐳 Build & Push"
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            RAILS_MASTER_KEY=${{ secrets.RAILS_MASTER_KEY }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: "🏷️ Git Tag"
+        run: |
+          VERSION="v${{ needs.prepare.outputs.final_version }}"
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git tag -d "$VERSION" 2>/dev/null || true
+          git tag -a "$VERSION" -m "Release ${{ needs.prepare.outputs.final_version }}"
+          git push origin "$VERSION" --force
+        continue-on-error: true
+
+  # ===========================================================================
+  # Deploy
+  # ===========================================================================
+  deploy:
+    name: "🚀 Deploy"
+    runs-on: ubuntu-latest
+    needs: [prepare, build]
+    if: always() && (needs.build.result == 'success' || needs.build.result == 'skipped')
+    environment: sandbox
+
+    steps:
+      - name: "📢 Discord - Início"
+        run: |
+          curl -X POST "${{ secrets.DISCORD_WEBHOOK_URL }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "embeds": [{
+                "title": "🚀 Deploy SANDBOX Iniciado",
+                "color": 3447003,
+                "fields": [
+                  {"name": "Versão", "value": "${{ needs.prepare.outputs.final_version }}", "inline": true},
+                  {"name": "Iniciado por", "value": "${{ github.actor }}", "inline": true}
+                ],
+                "footer": {"text": "AVSI EcoEnel"},
+                "timestamp": "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'"
+              }]
+            }'
+
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: docker
+
+      - name: "🔗 Setup Tailscale"
+        uses: tailscale/github-action@v2
+        with:
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
+          tags: tag:ci
+
+      - name: "🔒 Setup SSH"
+        run: |
+          mkdir -p ~/.ssh
+          cat > ~/.ssh/config << 'EOF'
+          Host ${{ env.DEPLOY_HOST }}
+            User root
+            Port 22
+            StrictHostKeyChecking no
+            UserKnownHostsFile /dev/null
+          EOF
+          chmod 600 ~/.ssh/config
+
+      - name: "🚀 Deploy"
+        env:
+          IMAGE_TAG: ${{ needs.prepare.outputs.image_tag }}
+        run: |
+          HOST="${{ env.DEPLOY_HOST }}"
+
+          echo "╔════════════════════════════════════════════╗"
+          echo "║  🚀 Deploy SANDBOX                         ║"
+          echo "╠════════════════════════════════════════════╣"
+          echo "║  📦 Tag: $IMAGE_TAG"
+          echo "║  🖥️  Host: $HOST"
+          echo "╚════════════════════════════════════════════╝"
+
+          # Criar diretório
+          ssh $HOST "mkdir -p ${{ env.DEPLOY_PATH }}"
+
+          # Copiar docker-compose e nginx.conf
+          scp docker/docker-compose.sandbox.yml $HOST:${{ env.DEPLOY_PATH }}/docker-compose.yml
+          scp docker/nginx/nginx.conf $HOST:${{ env.DEPLOY_PATH }}/nginx.conf
+
+          # Copiar .env
+          echo "${{ secrets.SANDBOX_ENV }}" | base64 -d > /tmp/sandbox.env
+          scp /tmp/sandbox.env $HOST:${{ env.DEPLOY_PATH }}/.env
+
+          # Deploy
+          ssh $HOST << ENDSSH
+            cd ${{ env.DEPLOY_PATH }}
+
+            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+            export IMAGE_TAG=${IMAGE_TAG}
+            export REGISTRY=${{ env.REGISTRY }}
+            export IMAGE_NAME=${{ env.IMAGE_NAME }}
+
+            docker compose pull app
+            docker compose up -d --remove-orphans
+
+            sleep 5
+
+            echo "🗃️ Rodando migrations..."
+            docker compose exec -T app bin/rails db:migrate || echo "Primary: no migrations"
+            docker compose exec -T app bin/rails db:migrate:cache || echo "Cache: no migrations"
+            docker compose exec -T app bin/rails db:migrate:queue || echo "Queue: no migrations"
+            docker compose exec -T app bin/rails db:migrate:cable || echo "Cable: no migrations"
+
+            echo "💚 Health check..."
+            for i in {1..15}; do
+              if curl -sf http://localhost/up &>/dev/null; then
+                echo "✅ OK!"
+                exit 0
+              fi
+              echo -n "."
+              sleep 2
+            done
+            echo "⚠️ Health check timeout"
+          ENDSSH
+
+      - name: "📝 Summary"
+        run: |
+          echo "### 🚀 Deploy SANDBOX" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Versão:** ${{ needs.prepare.outputs.final_version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Tag:** ${{ needs.prepare.outputs.image_tag }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **URL:** https://sandbox.ecoenel.avsi.eco.br" >> $GITHUB_STEP_SUMMARY
+
+      - name: "📢 Discord - Sucesso"
+        if: success()
+        run: |
+          curl -X POST "${{ secrets.DISCORD_WEBHOOK_URL }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "embeds": [{
+                "title": "✅ Deploy SANDBOX Concluído",
+                "color": 3066993,
+                "fields": [
+                  {"name": "Versão", "value": "${{ needs.prepare.outputs.final_version }}", "inline": true},
+                  {"name": "Tag", "value": "${{ needs.prepare.outputs.image_tag }}", "inline": true},
+                  {"name": "URL", "value": "[sandbox.ecoenel.avsi.eco.br](https://sandbox.ecoenel.avsi.eco.br)", "inline": false}
+                ],
+                "footer": {"text": "AVSI EcoEnel"},
+                "timestamp": "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'"
+              }]
+            }'
+
+      - name: "📢 Discord - Erro"
+        if: failure()
+        run: |
+          curl -X POST "${{ secrets.DISCORD_WEBHOOK_URL }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "embeds": [{
+                "title": "❌ Deploy SANDBOX Falhou",
+                "color": 15158332,
+                "fields": [
+                  {"name": "Versão", "value": "${{ needs.prepare.outputs.final_version }}", "inline": true},
+                  {"name": "Executado por", "value": "${{ github.actor }}", "inline": true},
+                  {"name": "Logs", "value": "[Ver no GitHub](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})", "inline": false}
+                ],
+                "footer": {"text": "AVSI EcoEnel"},
+                "timestamp": "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'"
+              }]
+            }'

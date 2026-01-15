@@ -1,0 +1,58 @@
+<%= render partial: 'relatorios/shared/pdf_header', locals: {
+  titulo: @titulo,
+  subtitulo: 'Relatorio de Residuos por Reciclador e Evento',
+  data_geracao: @data_geracao
+} %>
+
+<% if @dados.present? %>
+  <%= render partial: 'relatorios/shared/pdf_summary', locals: {
+    titulo: 'Resumo Geral',
+    items: [
+      { label: 'Total de Registros', value: number_with_delimiter(@dados.length) },
+      { label: 'Quantidade Total (Kg)', value: @totais[:qtd_coletado] },
+      { label: 'Valor Total (R$)', value: @totais[:valor] }
+    ]
+  } %>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Reciclador</th>
+        <th>Evento</th>
+        <th>Residuo</th>
+        <th class="text-right">Qtd Coletado (Kg)</th>
+        <th class="text-right">Valor (R$)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% @dados.each do |item| %>
+        <tr>
+          <td><%= item[:reciclador] %></td>
+          <td style="font-size: 9px;"><%= item[:evento] %></td>
+          <td><%= item[:residuo] %></td>
+          <td class="text-right"><%= item[:qtd_coletado] %></td>
+          <td class="text-right"><%= item[:valor] %></td>
+        </tr>
+      <% end %>
+    </tbody>
+    <tfoot>
+      <tr>
+        <td colspan="3"><strong>TOTAL</strong></td>
+        <td class="text-right"><strong><%= @totais[:qtd_coletado] %></strong></td>
+        <td class="text-right"><strong><%= @totais[:valor] %></strong></td>
+      </tr>
+    </tfoot>
+  </table>
+
+  <%= render partial: 'relatorios/shared/pdf_footer', locals: {
+    data_geracao: @data_geracao,
+    total_registros: @dados.length
+  } %>
+
+<% else %>
+  <%= render partial: 'relatorios/shared/pdf_no_data' %>
+
+  <%= render partial: 'relatorios/shared/pdf_footer', locals: {
+    data_geracao: @data_geracao
+  } %>
+<% end %>

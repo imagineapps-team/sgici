@@ -1,0 +1,96 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# Script para configurar feature flags baseado no APP_PROFILE
+#
+# USO:
+#   bin/setup-features           # Configura baseado em ENV['APP_PROFILE']
+#   bin/setup-features light     # Força configuração Light
+#   bin/setup-features ecoenel   # Força configuração EcoEnel
+#
+# DOCKER:
+#   docker-compose exec ecoenel bin/setup-features
+#   docker-compose exec light bin/setup-features
+#
+
+require_relative "../config/environment"
+
+profile = ARGV[0] || ENV.fetch("APP_PROFILE", "default")
+
+puts "="*50
+puts "Configurando Feature Flags"
+puts "="*50
+puts "Profile: #{profile}"
+puts ""
+
+# Módulos Light-específicos
+light_modules = %i[
+  modulo_doacao_lampadas
+  modulo_doacao_pngd
+  modulo_venda_pngv
+]
+
+# Features de lâmpadas
+lamp_features = %i[
+  lampadas_sucata_obrigatoria
+  lampadas_produto_brinde
+]
+
+# Kill switches
+kill_switches = %i[
+  kill_doacao_lampadas
+  kill_doacao_pngd
+  kill_vendas
+  kill_reciclagem
+]
+
+case profile.to_sym
+when :light
+  puts "-> Habilitando módulos Light..."
+
+  light_modules.each do |feature|
+    Flipper.enable(feature)
+    puts "   ✓ #{feature} = ON"
+  end
+
+  lamp_features.each do |feature|
+    Flipper.enable(feature)
+    puts "   ✓ #{feature} = ON"
+  end
+
+  kill_switches.each do |feature|
+    Flipper.disable(feature)
+    puts "   ✗ #{feature} = OFF (kill switch desativado)"
+  end
+
+when :ecoenel
+  puts "-> Configurando EcoEnel (módulos Light desabilitados)..."
+
+  light_modules.each do |feature|
+    Flipper.disable(feature)
+    puts "   ✗ #{feature} = OFF"
+  end
+
+  lamp_features.each do |feature|
+    Flipper.disable(feature)
+    puts "   ✗ #{feature} = OFF"
+  end
+
+  kill_switches.each do |feature|
+    Flipper.disable(feature)
+    puts "   ✗ #{feature} = OFF (kill switch desativado)"
+  end
+
+else
+  puts "-> Profile '#{profile}' não reconhecido."
+  puts "   Profiles válidos: light, ecoenel"
+  puts ""
+  puts "   Mantendo configuração atual..."
+end
+
+puts ""
+puts "="*50
+puts "Feature Flags configuradas!"
+puts ""
+puts "Acesse /flipper para gerenciar via UI."
+puts "="*50

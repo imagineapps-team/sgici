@@ -1,0 +1,121 @@
+# frozen_string_literal: true
+
+wb = xlsx_package.workbook
+
+# Estilos
+header_style = wb.styles.add_style(
+  bg_color: '4472C4',
+  fg_color: 'FFFFFF',
+  b: true,
+  alignment: { horizontal: :center, vertical: :center, wrap_text: true },
+  border: { style: :thin, color: '000000' }
+)
+
+cell_style = wb.styles.add_style(
+  alignment: { vertical: :center },
+  border: { style: :thin, color: 'CCCCCC' }
+)
+
+number_style = wb.styles.add_style(
+  alignment: { horizontal: :right, vertical: :center },
+  border: { style: :thin, color: 'CCCCCC' },
+  format_code: '#,##0.00'
+)
+
+total_style = wb.styles.add_style(
+  bg_color: 'E2EFDA',
+  b: true,
+  alignment: { horizontal: :right, vertical: :center },
+  border: { style: :thin, color: '000000' },
+  format_code: '#,##0.00'
+)
+
+total_text_style = wb.styles.add_style(
+  bg_color: 'E2EFDA',
+  b: true,
+  alignment: { vertical: :center },
+  border: { style: :thin, color: '000000' }
+)
+
+title_style = wb.styles.add_style(
+  b: true,
+  sz: 14,
+  alignment: { horizontal: :center }
+)
+
+wb.add_worksheet(name: 'Fatura Reciclador') do |sheet|
+  # Titulo
+  sheet.add_row [@titulo], style: title_style
+  sheet.merge_cells('A1:D1')
+  sheet.add_row ["Gerado em: #{Time.current.strftime('%d/%m/%Y as %H:%M')}"]
+  sheet.add_row [] # Linha vazia
+
+  if @dados.present?
+    if @modelo == 'TR'
+      # Modelo TR - Total por Residuo
+      headers = ['Reciclador', 'Residuo', 'Peso (KG)', 'Custo (R$)']
+      sheet.add_row headers, style: header_style
+
+      totais = { peso: 0, valor: 0 }
+
+      @dados.each do |item|
+        peso = item[:total_peso].to_s.gsub('.', '').gsub(',', '.').to_f
+        valor = item[:total_valor].to_s.gsub('.', '').gsub(',', '.').to_f
+
+        totais[:peso] += peso
+        totais[:valor] += valor
+
+        sheet.add_row [
+          item[:reciclador],
+          item[:residuo],
+          peso,
+          valor
+        ], style: [cell_style, cell_style, number_style, number_style]
+      end
+
+      # Totais
+      sheet.add_row [
+        'TOTAL', '',
+        totais[:peso],
+        totais[:valor]
+      ], style: [total_text_style, total_text_style, total_style, total_style]
+
+      # Ajustar largura das colunas
+      sheet.column_widths 30, 30, 15, 15
+
+    else
+      # Modelo RC - Repasse a Concessionaria
+      headers = ['Acao', 'Local', 'Peso (KG)', 'Custo (R$)']
+      sheet.add_row headers, style: header_style
+
+      totais = { peso: 0, valor: 0 }
+
+      @dados.each do |item|
+        peso = item[:total_peso].to_s.gsub('.', '').gsub(',', '.').to_f
+        valor = item[:total_valor].to_s.gsub('.', '').gsub(',', '.').to_f
+
+        totais[:peso] += peso
+        totais[:valor] += valor
+
+        sheet.add_row [
+          item[:acao_nome],
+          item[:local_acao],
+          peso,
+          valor
+        ], style: [cell_style, cell_style, number_style, number_style]
+      end
+
+      # Totais
+      sheet.add_row [
+        'TOTAL', '',
+        totais[:peso],
+        totais[:valor]
+      ], style: [total_text_style, total_text_style, total_style, total_style]
+
+      # Ajustar largura das colunas
+      sheet.column_widths 30, 30, 15, 15
+    end
+  else
+    sheet.add_row ['Nenhum dado encontrado para os filtros selecionados.']
+  end
+end

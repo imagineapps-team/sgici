@@ -1,0 +1,14 @@
+<%# Parametros: titulo (opcional), items (array de hashes com :label e :value) %>
+<div class="summary">
+  <% if defined?(titulo) && titulo.present? %>
+    <div class="summary-title"><%= titulo %></div>
+  <% end %>
+  <div class="summary-grid">
+    <% items.each do |item| %>
+      <div class="summary-item">
+        <div class="summary-label"><%= item[:label] %></div>
+        <div class="summary-value"><%= item[:value] %></div>
+      </div>
+    <% end %>
+  </div>
+</div>

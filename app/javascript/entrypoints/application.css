@@ -1,0 +1,80 @@
+@import 'tailwindcss';
+
+@plugin '@tailwindcss/typography';
+@plugin '@tailwindcss/forms';
+
+/* ===========================================
+   BRANDING - CSS Custom Properties
+   Valores são injetados dinamicamente via JS
+   baseado nas ENVs do servidor
+   =========================================== */
+
+:root {
+  /* Cores da marca (valores padrão, sobrescritos via JS) */
+  --brand-primary: #3B82F6;
+  --brand-primary-dark: #2563EB;
+  --brand-primary-light: #60A5FA;
+  --brand-secondary: #10B981;
+  --brand-accent: #F59E0B;
+
+  /* Cores derivadas com opacidade */
+  --brand-primary-10: color-mix(in srgb, var(--brand-primary) 10%, transparent);
+  --brand-primary-20: color-mix(in srgb, var(--brand-primary) 20%, transparent);
+  --brand-primary-50: color-mix(in srgb, var(--brand-primary) 50%, transparent);
+}
+
+/* ===========================================
+   CLASSES UTILITÁRIAS DE BRANDING
+   Use estas classes ao invés de cores fixas
+   =========================================== */
+
+/* Backgrounds */
+.bg-brand-primary { background-color: var(--brand-primary); }
+.bg-brand-primary-dark { background-color: var(--brand-primary-dark); }
+.bg-brand-primary-light { background-color: var(--brand-primary-light); }
+.bg-brand-secondary { background-color: var(--brand-secondary); }
+.bg-brand-accent { background-color: var(--brand-accent); }
+.bg-brand-primary\/10 { background-color: var(--brand-primary-10); }
+.bg-brand-primary\/20 { background-color: var(--brand-primary-20); }
+.bg-brand-primary\/50 { background-color: var(--brand-primary-50); }
+
+/* Textos */
+.text-brand-primary { color: var(--brand-primary); }
+.text-brand-primary-dark { color: var(--brand-primary-dark); }
+.text-brand-secondary { color: var(--brand-secondary); }
+.text-brand-accent { color: var(--brand-accent); }
+
+/* Bordas */
+.border-brand-primary { border-color: var(--brand-primary); }
+.border-brand-secondary { border-color: var(--brand-secondary); }
+
+/* Ring (focus) */
+.ring-brand-primary { --tw-ring-color: var(--brand-primary); }
+.focus\:ring-brand-primary:focus { --tw-ring-color: var(--brand-primary); }
+
+/* Hover states */
+.hover\:bg-brand-primary:hover { background-color: var(--brand-primary); }
+.hover\:bg-brand-primary-dark:hover { background-color: var(--brand-primary-dark); }
+.hover\:text-brand-primary:hover { color: var(--brand-primary); }
+
+/* Focus states */
+.focus\:border-brand-primary:focus { border-color: var(--brand-primary); }
+
+/* Accent color (checkboxes, etc) */
+.accent-brand-primary { accent-color: var(--brand-primary); }
+
+/* Selection/Active states - usando variantes com opacidade */
+.bg-brand-primary-select { background-color: var(--brand-primary-10); }
+.text-brand-primary-select { color: var(--brand-primary); }
+.bg-brand-primary-tag { background-color: var(--brand-primary-20); }
+
+/* Checkbox/Radio com branding */
+.checkbox-brand-primary {
+  accent-color: var(--brand-primary);
+  color: var(--brand-primary);
+}
+
+/* Sidebar específico - usa primary como base */
+.sidebar-bg { background-color: var(--brand-primary-dark); }
+.sidebar-item-active { background-color: var(--brand-primary); }
+.sidebar-item-hover:hover { background-color: var(--brand-primary-50); }
