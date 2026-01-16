@@ -3,7 +3,7 @@
 class CreateConfiguracoesUsuario < ActiveRecord::Migration[8.1]
   def change
     create_table :configuracoes_usuario do |t|
-      t.references :usuario, null: false, foreign_key: { to_table: :usuarios }
+      t.references :usuario, null: false, foreign_key: { to_table: :usuarios }, index: { unique: true }
 
       # Preferências de notificação
       t.boolean :notificar_email, default: true
@@ -29,7 +29,5 @@ class CreateConfiguracoesUsuario < ActiveRecord::Migration[8.1]
 
       t.timestamps
     end
-
-    add_index :configuracoes_usuario, :usuario_id, unique: true
   end
 end

@@ -14,3 +14,30 @@
 # ActiveSupport::Inflector.inflections(:en) do |inflect|
 #   inflect.acronym "RESTful"
 # end
+
+# Inflexões para português brasileiro (SGICI)
+ActiveSupport::Inflector.inflections(:en) do |inflect|
+  # Processos de importação
+  inflect.irregular 'processo_importacao', 'processos_importacao'
+  inflect.irregular 'processo_prestador', 'processo_prestadores'
+
+  # Prestadores e fornecedores
+  inflect.irregular 'prestador_servico', 'prestadores_servico'
+  inflect.irregular 'fornecedor', 'fornecedores'
+
+  # Custos
+  inflect.irregular 'categoria_custo', 'categorias_custo'
+  inflect.irregular 'custo_previsto', 'custos_previstos'
+  inflect.irregular 'custo_real', 'custos_reais'
+
+  # Eventos e ocorrências
+  inflect.irregular 'evento_logistico', 'eventos_logisticos'
+  inflect.irregular 'ocorrencia', 'ocorrencias'
+
+  # Outros
+  inflect.irregular 'aprovacao', 'aprovacoes'
+  inflect.irregular 'notificacao', 'notificacoes'
+  inflect.irregular 'configuracao_usuario', 'configuracoes_usuario'
+  inflect.irregular 'anexo', 'anexos'
+  inflect.irregular 'usuario', 'usuarios'
+end

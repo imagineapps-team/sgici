@@ -6,26 +6,34 @@ return unless Rails.env.development?
 
 puts "Criando dados de exemplo para desenvolvimento..."
 
+# Criar perfis se não existirem
+perfil_admin = Perfil.find_or_create_by!(nome: "Administrador")
+perfil_gestor = Perfil.find_or_create_by!(nome: "Gestor")
+perfil_operacional = Perfil.find_or_create_by!(nome: "Operacional")
+
 # Criar usuário admin se não existir
-admin = Usuario.find_or_create_by!(email: "admin@sgici.com") do |u|
+admin = Usuario.find_or_create_by!(login: "admin") do |u|
   u.nome = "Administrador"
+  u.email = "admin@sgici.com"
   u.password = "password123"
-  u.password_confirmation = "password123"
-  u.perfil_id = Perfil.find_or_create_by!(nome: "Administrador").id
+  u.perfil = perfil_admin
+  u.status = "A"
 end
 
-gestor = Usuario.find_or_create_by!(email: "gestor@sgici.com") do |u|
+gestor = Usuario.find_or_create_by!(login: "gestor") do |u|
   u.nome = "Gestor de Importação"
+  u.email = "gestor@sgici.com"
   u.password = "password123"
-  u.password_confirmation = "password123"
-  u.perfil_id = Perfil.find_or_create_by!(nome: "Gestor").id
+  u.perfil = perfil_gestor
+  u.status = "A"
 end
 
-operacional = Usuario.find_or_create_by!(email: "operacional@sgici.com") do |u|
+operacional = Usuario.find_or_create_by!(login: "operacional") do |u|
   u.nome = "Operador Logístico"
+  u.email = "operacional@sgici.com"
   u.password = "password123"
-  u.password_confirmation = "password123"
-  u.perfil_id = Perfil.find_or_create_by!(nome: "Operacional").id
+  u.perfil = perfil_operacional
+  u.status = "A"
 end
 
 puts "Usuários criados: admin, gestor, operacional (senha: password123)"
