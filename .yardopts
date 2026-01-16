@@ -6,7 +6,7 @@
 --private
 --hide-void-return
 --no-private
---plugin yard-activerecord
+# --plugin yard-activerecord (requires: gem install yard-activerecord)
 app/**/*.rb
 lib/**/*.rb
 - README.md
