@@ -14,226 +14,96 @@ export const menuSections: MenuSection[] = [
     ]
   },
   {
-    id: 'cadastros',
-    title: 'Cadastros',
+    id: 'operacional',
+    title: 'Operacional',
     items: [
       {
-        id: 'beneficiarios',
-        label: 'Beneficiarios',
-        href: '/beneficiarios',
-        icon: 'users',
-        children: [
-          {
-            id: 'contratos',
-            label: 'Contratos',
-            href: '/contratos',
-            controller: 'contratos'
-          },
-          {
-            id: 'clientes',
-            label: 'Clientes',
-            href: '/clientes',
-            controller: 'clientes'
-          }
-        ]
-      },
-      {
-        id: 'acoes-eventos',
-        label: 'Acoes/Eventos',
-        href: '/acoes-eventos',
-        icon: 'calendar',
-        children: [
-          {
-            id: 'acoes',
-            label: 'Acoes',
-            href: '/acaos',
-            controller: 'acaos'
-          },
-          {
-            id: 'tipo-acoes',
-            label: 'Tipo de Acoes',
-            href: '/tipo_acaos',
-            controller: 'tipo_acaos'
-          },
-          {
-            id: 'eventos',
-            label: 'Eventos',
-            href: '/eventos',
-            controller: 'eventos'
-          }
-        ]
-      },
-      {
-        id: 'parceiro',
-        label: 'Parceiro',
-        href: '/parceiros',
-        icon: 'building',
-        children: [
-          {
-            id: 'instituicoes',
-            label: 'Instituicoes',
-            href: '/instituicaos',
-            controller: 'instituicaos'
-          },
-          {
-            id: 'parceiros',
-            label: 'Parceiros',
-            href: '/parceiros',
-            controller: 'parceiros'
-          },
-          {
-            id: 'recicladores',
-            label: 'Recicladores',
-            href: '/recicladors',
-            controller: 'recicladors'
-          }
-        ]
-      },
-      {
-        id: 'residuos',
-        label: 'Residuos',
-        href: '/residuos',
-        icon: 'trash',
-        children: [
-          {
-            id: 'tipo-residuo',
-            label: 'Tipo de Residuo',
-            href: '/tipo_residuos',
-            controller: 'tipo_residuos'
-          },
-          {
-            id: 'unidade-medida',
-            label: 'Unidade de Medida',
-            href: '/unidade_medidas',
-            controller: 'unidade_medidas'
-          },
-          {
-            id: 'residuos-lista',
-            label: 'Residuos',
-            href: '/residuos',
-            controller: 'residuos'
-          }
-        ]
-      },
-      {
-        id: 'localidades',
-        label: 'Localidades',
-        href: '/localidades',
-        icon: 'mapPin',
-        children: [
-          {
-            id: 'locais-acao',
-            label: 'Locais de Acao',
-            href: '/comunidades',
-            controller: 'comunidades'
-          },
-          {
-            id: 'bairros',
-            label: 'Bairros',
-            href: '/bairros',
-            controller: 'bairros'
-          }
-        ]
-      },
-      {
-        id: 'campanhas',
-        label: 'Campanhas',
-        href: '/campanhas',
-        controller: 'campanhas',
-        icon: 'megaphone'
-      },
-      {
-        id: 'veiculos',
-        label: 'Cadastro de Veiculos',
-        href: '/veiculos',
-        controller: 'veiculos',
+        id: 'processos',
+        label: 'Processos de Importacao',
+        href: '/processos_importacao',
+        controller: 'processos_importacao',
         icon: 'truck'
+      },
+      {
+        id: 'custos',
+        label: 'Gestao de Custos',
+        href: '/custos',
+        icon: 'currencyDollar',
+        children: [
+          {
+            id: 'custos-previstos',
+            label: 'Custos Previstos',
+            href: '/custos_previstos',
+            controller: 'custos_previstos'
+          },
+          {
+            id: 'custos-reais',
+            label: 'Custos Reais',
+            href: '/custos_reais',
+            controller: 'custos_reais'
+          }
+        ]
+      },
+      {
+        id: 'eventos-logisticos',
+        label: 'Eventos Logisticos',
+        href: '/eventos_logisticos',
+        controller: 'eventos_logisticos',
+        icon: 'calendar'
       }
     ]
   },
   {
-    id: 'reciclagens',
-    title: 'Reciclagens',
+    id: 'cadastros',
+    title: 'Cadastros',
     items: [
       {
-        id: 'reciclagens-participantes',
-        label: 'Participantes',
-        href: '/reciclagens',
-        controller: 'reciclagens',
-        icon: 'userGroup'
+        id: 'fornecedores',
+        label: 'Fornecedores',
+        href: '/fornecedores',
+        controller: 'fornecedores',
+        icon: 'building'
       },
       {
-        id: 'reciclagens-recibos',
-        label: 'Emissão de Recibos',
-        href: '/recibos',
-        controller: 'recibos',
-        icon: 'documentText'
+        id: 'prestadores',
+        label: 'Prestadores de Servico',
+        href: '/prestadores_servico',
+        controller: 'prestadores_servico',
+        icon: 'users'
       },
       {
-        id: 'reciclagens-integracoes',
-        label: 'Integrações',
-        href: '/reciclagens/integracoes',
-        controller: 'reciclagens',
-        icon: 'arrowsRightLeft'
+        id: 'categorias',
+        label: 'Categorias de Custo',
+        href: '/categorias_custo',
+        controller: 'categorias_custo',
+        icon: 'folder'
       }
     ]
   },
   {
     id: 'relatorios',
-    title: 'Relatórios',
+    title: 'Relatorios',
     items: [
       {
-        id: 'historico',
-        label: 'Histórico',
-        href: '/relatorios',
-        icon: 'chart',
-        children: [
-          {
-            id: 'historico-eventos',
-            label: 'Por Ação',
-            href: '/relatorios/historico_eventos',
-            controller: 'relatorios'
-          },
-          {
-            id: 'historico-participacao',
-            label: 'Por Participação',
-            href: '/relatorios/historico_participacao',
-            controller: 'relatorios'
-          },
-          {
-            id: 'historico-residuos',
-            label: 'Por Resíduos',
-            href: '/relatorios/historico_residuos',
-            controller: 'relatorios'
-          },
-          {
-            id: 'historico-reciclador-evento',
-            label: 'Reciclador por Evento',
-            href: '/relatorios/historico_reciclador_evento',
-            controller: 'relatorios'
-          }
-        ]
-      },
-      {
-        id: 'historico-fatura-reciclador',
-        label: 'Fatura do Reciclador',
-        href: '/relatorios/historico_fatura_reciclador',
+        id: 'relatorio-processos',
+        label: 'Processos',
+        href: '/relatorios/processos',
         controller: 'relatorios',
         icon: 'documentText'
       },
       {
-        id: 'relatorio-campanhas',
-        label: 'Campanhas',
-        href: '/relatorios/campanhas',
+        id: 'relatorio-custos',
+        label: 'Analise de Custos',
+        href: '/relatorios/custos',
         controller: 'relatorios',
-        icon: 'megaphone'
+        icon: 'chart'
       },
       {
-        id: 'relatorio-veiculos',
-        label: 'Veiculos',
-        href: '/relatorios/veiculos',
+        id: 'relatorio-fornecedores',
+        label: 'Performance Fornecedores',
+        href: '/relatorios/fornecedores',
         controller: 'relatorios',
-        icon: 'truck'
+        icon: 'chartBar'
       }
     ]
   },

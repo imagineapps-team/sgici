@@ -975,7 +975,53 @@ O sistema envia notificações automáticas nos seguintes casos:
 
 ---
 
+## Status de Implementação das Regras de Negócio
+
+### Regras Implementadas (✅)
+
+| Código | Regra | Status |
+|--------|-------|--------|
+| RN001 | Número Único de Processo | ✅ Validação no Model |
+| RN002 | Datas Cronológicas | ✅ Validação com callback |
+| RN003 | Custos Reais Apenas Após Embarque | ✅ Validação por status |
+| RN004 | Cálculo Automático de Impostos | ✅ Service dedicado |
+| RN005 | Fornecedor Ativo | ✅ Scope + validação |
+| RN006 | Finalização Completa | ✅ Método `pode_finalizar?` |
+| RN007 | Auditoria de Modificações | ✅ AuditLog model |
+| RN008 | Conversão de Moeda | ✅ Callback `calcular_valor_brl` |
+| RN009 | Incoterm Define Responsabilidades | ✅ Constantes + validações |
+| RN010 | Modal Define Locais | ✅ Validação condicional |
+| RN011 | Desvio > 10% Alerta Gestor | ⚠️ Cálculo existe, falta notificação |
+| RN012 | Atraso > 7 Dias Cria Ocorrência | ⚠️ Detecção existe, falta auto-criar |
+| RN013 | Prestador Único por Tipo | ✅ Validação many-to-many |
+| RN014 | Gestor Não Edita | ⚠️ Requer implementação de policies |
+| RN015 | Processo Finalizado Imutável | ✅ Flag `bloqueado_em` |
+
+### Fluxos de Negócio Implementados
+
+| Fluxo | Status | Observações |
+|-------|--------|-------------|
+| Criação e Planejamento | ✅ | RF001 + RF002 |
+| Aprovação | ✅ | Transição `aprovar!` |
+| Embarque e Trânsito | ✅ | Transição `transitar!` |
+| Chegada e Desembaraço | ✅ | Transição `desembaracar!` |
+| Entrega e Finalização | ✅ | Transição `finalizar!` |
+| Consulta de Indicadores | ✅ | Dashboard + Relatórios |
+
+### Cálculos Automáticos Implementados
+
+| Cálculo | Status |
+|---------|--------|
+| Custo Total Previsto | ✅ |
+| Custo Total Real | ✅ |
+| Desvio de Custo (%) | ✅ |
+| Lead Time | ✅ |
+| Impostos (II, IPI, PIS/COFINS, ICMS) | ✅ |
+
+---
+
 **Documento criado em:** 2026-01-15
-**Versão:** 1.0
+**Versão:** 1.1
 **Autor:** Especialista em Regras de Negócio
-**Status:** Aprovado para desenvolvimento
+**Status:** Implementado (MVP concluído)
+**Atualizado em:** 2026-01-16

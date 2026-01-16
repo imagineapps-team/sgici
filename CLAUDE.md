@@ -4,6 +4,58 @@
 
 Sistema web para gestão completa de processos de importação, controle de custos e análise de indicadores.
 
+---
+
+## REFERÊNCIA OBRIGATÓRIA: avsi-multiapp
+
+**IMPORTANTE**: O projeto `~/code/avsi-multiapp` é a REFERÊNCIA FUNCIONAL para todo o desenvolvimento do SGICI.
+
+### Regras de Desenvolvimento
+
+1. **SEMPRE consultar avsi-multiapp antes de criar/modificar código**
+2. **Copiar padrões, NÃO inventar novos** - A arquitetura já está validada
+3. **Manter consistência** - Controllers, pages Vue, composables devem seguir os mesmos padrões
+
+### Arquivos de Referência por Tipo
+
+| Tipo | Arquivo Referência em avsi-multiapp |
+|------|-------------------------------------|
+| **Controller CRUD Completo** | `app/controllers/reciclagens_controller.rb` |
+| **Controller CRUD Simples** | `app/controllers/usuarios_controller.rb` |
+| **Controller Eventos (nested)** | `app/controllers/eventos_controller.rb` |
+| **Page Index DataTable** | `app/javascript/vue/pages/usuarios/UsuariosIndex.vue` |
+| **Page Index Avançada** | `app/javascript/vue/pages/reciclagens/ReciclagensIndex.vue` |
+| **Page Form Simples** | `app/javascript/vue/pages/usuarios/UsuariosForm.vue` |
+| **Page Form Complexo** | `app/javascript/vue/pages/reciclagens/ReciclagensForm.vue` |
+| **Page Show/Detalhes** | `app/javascript/vue/pages/reciclagens/ReciclagensShow.vue` |
+| **Dashboard** | `app/javascript/vue/pages/dashboard/DashboardIndex.vue` |
+| **Relatórios** | `app/controllers/relatorios_controller.rb` |
+| **Types TypeScript** | `app/javascript/vue/types/` |
+| **Composables** | `app/javascript/vue/composables/` |
+
+### Comando Rápido para Consulta
+
+```bash
+# Ver controller de referência
+cat ~/code/avsi-multiapp/app/controllers/reciclagens_controller.rb
+
+# Ver page de referência
+cat ~/code/avsi-multiapp/app/javascript/vue/pages/reciclagens/ReciclagensIndex.vue
+
+# Buscar padrão específico
+grep -r "def show" ~/code/avsi-multiapp/app/controllers/
+```
+
+### Checklist Antes de Criar Código
+
+- [ ] Consultei o arquivo de referência correspondente em avsi-multiapp?
+- [ ] Estou seguindo o mesmo padrão de nomenclatura?
+- [ ] As props do Inertia estão em camelCase?
+- [ ] Os métodos JSON seguem o padrão `*_list_json`, `*_form_json`, `*_detail_json`?
+- [ ] O controller herda de `InertiaController`?
+
+---
+
 ## Documentação
 
 | Documento | Descrição |

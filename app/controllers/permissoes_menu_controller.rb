@@ -48,7 +48,7 @@ class PermissoesMenuController < ApplicationController
       status: perfil.status,
       statusLabel: perfil.status_label,
       acessoTotal: perfil.acesso_total?,
-      menusCount: perfil.menus.where(ativo: true).count
+      menusCount: perfil.menus.count
     }
   end
 
@@ -59,21 +59,18 @@ class PermissoesMenuController < ApplicationController
         nome: menu.nome,
         controller: menu.controller,
         action: menu.action,
-        ordem: menu.ordem,
-        children: menu.submenus.ativos.ordered.map do |submenu|
+        children: menu.submenus.ordered.map do |submenu|
           {
             id: submenu.id,
             nome: submenu.nome,
             controller: submenu.controller,
             action: submenu.action,
-            ordem: submenu.ordem,
-            children: submenu.submenus.ativos.ordered.map do |sub2|
+            children: submenu.submenus.ordered.map do |sub2|
               {
                 id: sub2.id,
                 nome: sub2.nome,
                 controller: sub2.controller,
                 action: sub2.action,
-                ordem: sub2.ordem,
                 children: []
               }
             end

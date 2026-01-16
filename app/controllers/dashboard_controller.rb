@@ -1,10 +1,11 @@
 # frozen_string_literal: true
 
+# Dashboard Controller para SGICI
+# Fornece metricas e KPIs de processos de importacao
 class DashboardController < InertiaController
   def index
     render inertia: 'dashboard/DashboardIndex', props: {
       usuario: current_usuario.as_json(only: [:id, :login, :nome]),
-      indicadores: indicadores_config,
       filtrosPadrao: {
         dataInicial: Date.current.beginning_of_month.to_s,
         dataFinal: Date.current.end_of_month.to_s
@@ -12,54 +13,48 @@ class DashboardController < InertiaController
     }
   end
 
-  # Endpoint AJAX para buscar métricas do dashboard
+  # Endpoint AJAX para buscar metricas do dashboard
   def metrics
-    service = Dashboard::MetricsService.new(
-      data_inicial: parse_date(params[:data_inicial]),
-      data_final: parse_date(params[:data_final])
-    )
+    data_inicial = parse_date(params[:data_inicial]) || Date.current.beginning_of_month
+    data_final = parse_date(params[:data_final]) || Date.current.end_of_month
 
-    render json: service.call
+    render json: {
+      periodo: { inicio: data_inicial.iso8601, fim: data_final.iso8601 },
+      kpis: calcular_kpis(data_inicial, data_final),
+      processosPorStatus: processos_por_status,
+      custosComparativo: custos_comparativo(data_inicial, data_final),
+      proximasChegadas: proximas_chegadas,
+      processosAtrasados: processos_atrasados,
+      ultimosProcessos: ultimos_processos
+    }
   end
 
-  # Endpoint AJAX para buscar apenas KPIs (atualização parcial)
+  # Endpoint AJAX para buscar apenas KPIs (atualizacao parcial)
   def kpis
-    service = Dashboard::MetricsService.new(
-      data_inicial: parse_date(params[:data_inicial]),
-      data_final: parse_date(params[:data_final])
-    )
+    data_inicial = parse_date(params[:data_inicial]) || Date.current.beginning_of_month
+    data_final = parse_date(params[:data_final]) || Date.current.end_of_month
 
-    render json: service.calcular_kpis
+    render json: calcular_kpis(data_inicial, data_final)
   end
 
-  # Endpoint AJAX para buscar indicadores ambientais
+  # Mantido para compatibilidade, retorna dados vazios
   def indicadores_ambientais
-    service = Dashboard::MetricsService.new(
-      data_inicial: parse_date(params[:data_inicial]),
-      data_final: parse_date(params[:data_final])
-    )
-
-    render json: service.calcular_indicadores_ambientais
+    render json: {}
   end
 
-  # Endpoint AJAX para buscar dados por categoria
+  # Endpoint para dados de custos por categoria
   def por_categoria
-    service = Dashboard::MetricsService.new(
-      data_inicial: parse_date(params[:data_inicial]),
-      data_final: parse_date(params[:data_final])
-    )
+    data_inicial = parse_date(params[:data_inicial]) || Date.current.beginning_of_month
+    data_final = parse_date(params[:data_final]) || Date.current.end_of_month
 
-    render json: service.dados_por_categoria
+    render json: custos_comparativo(data_inicial, data_final)
   end
 
-  # Endpoint AJAX para buscar evolução temporal
+  # Endpoint para evolucao temporal
   def evolucao
-    service = Dashboard::MetricsService.new(
-      data_inicial: parse_date(params[:data_inicial]),
-      data_final: parse_date(params[:data_final])
-    )
+    meses = params[:meses]&.to_i || 6
 
-    render json: service.dados_evolucao(meses: params[:meses]&.to_i || 12)
+    render json: evolucao_processos(meses)
   end
 
   private
@@ -67,7 +62,6 @@ class DashboardController < InertiaController
   def parse_date(date_string)
     return nil if date_string.blank?
 
-    # Aceita formato brasileiro (dd/mm/yyyy) ou ISO (yyyy-mm-dd)
     if date_string.include?('/')
       Date.strptime(date_string, '%d/%m/%Y')
     else
@@ -77,59 +71,150 @@ class DashboardController < InertiaController
     nil
   end
 
-  # Configuração dos indicadores para o frontend
-  def indicadores_config
+  # Calcula KPIs principais
+  def calcular_kpis(data_inicial, data_final)
+    processos_ativos = ProcessoImportacao.ativos.count
+    processos_em_transito = ProcessoImportacao.em_transito.count
+
+    # Valor em transito (FOB em USD)
+    valor_transito = ProcessoImportacao.em_transito.sum(:valor_fob) || 0
+
+    # Variacao media de custos (processos finalizados no periodo)
+    processos_finalizados = ProcessoImportacao
+                              .finalizados
+                              .where(data_finalizacao: data_inicial..data_final)
+
+    variacao_media = if processos_finalizados.any?
+                       processos_finalizados.average(:desvio_percentual)&.to_f || 0
+                     else
+                       0
+                     end
+
+    # Alertas: processos atrasados
+    alertas = ProcessoImportacao.ativos.select(&:atrasado?).count
+
+    # Lead time medio (processos finalizados no periodo)
+    lead_time = processos_finalizados.where.not(lead_time_dias: nil).average(:lead_time_dias)&.to_f || 0
+
     {
-      co2e: {
-        icone: 'co2',
-        label: 'CO₂ Evitado',
-        descricao: 'evitados em emissão de CO2'
-      },
-      arvores: {
-        icone: 'arvore',
-        label: 'Árvores',
-        descricao: 'seriam necessárias para sequestrar o CO2 evitado ao longo de 1 ano'
-      },
-      km_evitados: {
-        icone: 'carro',
-        label: 'KM Evitados',
-        descricao: 'deixaram de ser percorridos por um automóvel padrão'
-      },
-      tempo_banho: {
-        icone: 'chuveiro',
-        label: 'Tempo de Banho',
-        descricao: 'de banho poupado usando um chuveiro elétrico'
-      },
-      tempo_ar: {
-        icone: 'ar-condicionado',
-        label: 'Tempo AC',
-        descricao: 'de uso poupados de um Ar Condicionado 9.000 BTU'
-      },
-      tempo_lampada: {
-        icone: 'lampada-led',
-        label: 'Tempo Lâmpada',
-        descricao: 'de uso poupados de uma lâmpada LED acesa'
-      },
-      tempo_tv: {
-        icone: 'televisao',
-        label: 'Tempo TV',
-        descricao: 'de uso poupados de uma TV'
-      },
-      agua_economizada: {
-        icone: 'agua',
-        label: 'Água Economizada',
-        descricao: 'de água economizada na reciclagem de papel'
-      },
-      piscinas: {
-        icone: 'piscina',
-        label: 'Piscinas Olímpicas',
-        descricao: 'piscinas olímpicas de água economizada'
-      },
-      carvao_evitado: {
-        icone: 'carvao',
-        label: 'Carvão Evitado',
-        descricao: 'de carvão que deixaram de ser queimados'
+      processosAtivos: processos_ativos,
+      processosEmTransito: processos_em_transito,
+      valorEmTransitoUsd: valor_transito.to_f,
+      variacaoMediaCusto: variacao_media.round(2),
+      alertasPendentes: alertas,
+      leadTimeMedio: lead_time.round(1)
+    }
+  end
+
+  # Processos agrupados por status
+  def processos_por_status
+    statuses = ProcessoImportacao::STATUSES
+
+    statuses.map do |key, label|
+      processos = ProcessoImportacao.where(status: key)
+      {
+        status: key,
+        statusLabel: label,
+        total: processos.count,
+        valorTotal: (processos.sum(:valor_fob) || 0).to_f
       }
+    end
+  end
+
+  # Comparativo de custos por categoria
+  def custos_comparativo(data_inicial, data_final)
+    categorias = CategoriaCusto.where(ativo: true).order(:ordem)
+
+    processos_ids = ProcessoImportacao
+                      .where(created_at: data_inicial.beginning_of_day..data_final.end_of_day)
+                      .pluck(:id)
+
+    return [] if processos_ids.empty?
+
+    categorias.filter_map do |cat|
+      previsto = CustoPrevisto.where(processo_importacao_id: processos_ids, categoria_custo_id: cat.id).sum(:valor_brl)
+      real = CustoReal.where(processo_importacao_id: processos_ids, categoria_custo_id: cat.id).sum(:valor_brl)
+
+      next if previsto.zero? && real.zero?
+
+      variacao = previsto.positive? ? ((real - previsto) / previsto * 100).round(2) : 0.0
+
+      {
+        categoria: cat.nome,
+        previsto: previsto.to_f,
+        real: real.to_f,
+        variacao: variacao.to_f
+      }
+    end
+  end
+
+  # Proximas chegadas previstas
+  def proximas_chegadas
+    ProcessoImportacao
+      .ativos
+      .where.not(data_chegada_prevista: nil)
+      .where('data_chegada_prevista >= ?', Date.current)
+      .order(:data_chegada_prevista)
+      .limit(5)
+      .map { |p| processo_resumo(p) }
+  end
+
+  # Processos atrasados
+  def processos_atrasados
+    ProcessoImportacao
+      .ativos
+      .select(&:atrasado?)
+      .sort_by { |p| p.dias_atraso || 0 }
+      .reverse
+      .first(5)
+      .map { |p| processo_resumo(p) }
+  end
+
+  # Ultimos processos criados
+  def ultimos_processos
+    ProcessoImportacao
+      .includes(:fornecedor)
+      .order(created_at: :desc)
+      .limit(5)
+      .map { |p| processo_resumo(p) }
+  end
+
+  # Evolucao de processos por mes
+  def evolucao_processos(meses)
+    resultado = []
+    meses.times do |i|
+      mes_ref = i.months.ago.beginning_of_month
+      mes_fim = mes_ref.end_of_month
+
+      criados = ProcessoImportacao.where(created_at: mes_ref..mes_fim).count
+      finalizados = ProcessoImportacao.finalizados.where(data_finalizacao: mes_ref..mes_fim).count
+
+      resultado.unshift({
+        periodo: mes_ref.strftime('%b/%y'),
+        criados: criados,
+        finalizados: finalizados
+      })
+    end
+
+    resultado
+  end
+
+  # JSON resumido de processo
+  def processo_resumo(processo)
+    dias_para_chegada = if processo.data_chegada_prevista && !processo.data_chegada_real
+                          (processo.data_chegada_prevista - Date.current).to_i
+                        end
+
+    {
+      id: processo.id,
+      numero: processo.numero,
+      fornecedor: processo.fornecedor.nome,
+      status: processo.status,
+      statusLabel: ProcessoImportacao::STATUSES[processo.status],
+      dataChegadaPrevista: processo.data_chegada_prevista&.iso8601,
+      diasParaChegada: dias_para_chegada,
+      atrasado: processo.atrasado?,
+      valorFob: processo.valor_fob&.to_f
     }
   end
 end

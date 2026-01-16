@@ -39,6 +39,9 @@ class ProcessoImportacao < ApplicationRecord
   validates :valor_fob, numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
   validates :taxa_cambio, numericality: { greater_than: 0 }, allow_nil: true
 
+  # RN002: Validação de datas cronológicas
+  validate :datas_cronologicas
+
   # Scopes
   scope :planejados, -> { where(status: 'planejado') }
   scope :aprovados, -> { where(status: 'aprovado') }
@@ -149,38 +152,71 @@ class ProcessoImportacao < ApplicationRecord
   def aprovar!(usuario)
     return false unless status == 'planejado'
 
-    update!(status: 'aprovado', atualizado_por: usuario)
+    transaction do
+      update!(status: 'aprovado', atualizado_por: usuario)
+      registrar_evento_transicao!(usuario, 'outro', 'Processo aprovado para embarque')
+    end
+    true
   end
 
   def iniciar_transito!(usuario)
     return false unless status == 'aprovado'
 
-    update!(status: 'em_transito', atualizado_por: usuario, data_embarque_real: data_embarque_real || Date.current)
+    transaction do
+      data_embarque = data_embarque_real || Date.current
+      update!(status: 'em_transito', atualizado_por: usuario, data_embarque_real: data_embarque)
+      registrar_evento_transicao!(usuario, 'embarque', 'Carga embarcada - processo em trânsito', data: data_embarque)
+    end
+    true
   end
 
   def registrar_desembaraco!(usuario, data: Date.current)
     return false unless status == 'em_transito'
 
-    update!(status: 'desembaracado', atualizado_por: usuario, data_desembaraco: data, data_chegada_real: data_chegada_real || data)
+    transaction do
+      update!(status: 'desembaracado', atualizado_por: usuario, data_desembaraco: data, data_chegada_real: data_chegada_real || data)
+      registrar_evento_transicao!(usuario, 'desembaraco', 'Desembaraço aduaneiro realizado', data: data)
+    end
+    true
   end
 
   def finalizar!(usuario)
     return false unless status == 'desembaracado'
 
-    consolidar_custos!
-    update!(
-      status: 'finalizado',
-      atualizado_por: usuario,
-      data_finalizacao: Date.current,
-      bloqueado_em: Time.current,
-      lead_time_dias: lead_time
-    )
+    transaction do
+      consolidar_custos!
+      update!(
+        status: 'finalizado',
+        atualizado_por: usuario,
+        data_finalizacao: Date.current,
+        bloqueado_em: Time.current,
+        lead_time_dias: lead_time
+      )
+      registrar_evento_transicao!(usuario, 'entrega', 'Processo finalizado - mercadoria entregue')
+    end
+    true
   end
 
   def cancelar!(usuario, motivo: nil)
     return false if status == 'finalizado'
 
-    update!(status: 'cancelado', atualizado_por: usuario, observacoes: [observacoes, "Cancelado: #{motivo}"].compact.join("\n"))
+    transaction do
+      update!(status: 'cancelado', atualizado_por: usuario, observacoes: [observacoes, "Cancelado: #{motivo}"].compact.join("\n"))
+      registrar_evento_transicao!(usuario, 'outro', "Processo cancelado: #{motivo.presence || 'Sem motivo informado'}")
+    end
+    true
+  end
+
+  # Registra evento logístico para transição de status
+  def registrar_evento_transicao!(usuario, tipo, descricao, data: Date.current)
+    eventos_logisticos.create!(
+      tipo: tipo,
+      descricao: descricao,
+      data_evento: data.is_a?(Date) ? data.to_time : data,
+      criado_por: usuario,
+      fonte: 'sistema',
+      local: origem_formatada
+    )
   end
 
   # Recalcula totais de custos
@@ -221,5 +257,26 @@ class ProcessoImportacao < ApplicationRecord
 
   def atualizar_estatisticas_fornecedor
     fornecedor.recalcular_score! if saved_change_to_status?
+  end
+
+  # RN002: Datas devem seguir ordem cronológica
+  def datas_cronologicas
+    if data_embarque_prevista.present? && data_chegada_prevista.present?
+      if data_chegada_prevista < data_embarque_prevista
+        errors.add(:data_chegada_prevista, 'deve ser posterior à data de embarque')
+      end
+    end
+
+    if data_chegada_prevista.present? && data_entrega_prevista.present?
+      if data_entrega_prevista < data_chegada_prevista
+        errors.add(:data_entrega_prevista, 'deve ser posterior à data de chegada')
+      end
+    end
+
+    if data_embarque_real.present? && data_chegada_real.present?
+      if data_chegada_real < data_embarque_real
+        errors.add(:data_chegada_real, 'deve ser posterior à data de embarque real')
+      end
+    end
   end
 end

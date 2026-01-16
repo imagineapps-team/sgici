@@ -1,0 +1,93 @@
+# frozen_string_literal: true
+# Template Excel para Performance de Fornecedores
+
+wb = xlsx_package.workbook
+styles = create_excel_styles(wb)
+
+wb.add_worksheet(name: 'Performance Fornecedores') do |sheet|
+  # Titulo
+  sheet.add_row ['Performance de Fornecedores'], style: styles[:title]
+  sheet.merge_cells('A1:H1')
+  sheet.add_row ["Gerado em: #{Time.current.strftime('%d/%m/%Y as %H:%M')}"], style: styles[:subtitle]
+  sheet.add_row [] # Linha vazia
+
+  if @dados.present?
+    # Headers
+    headers = [
+      'Fornecedor',
+      'Pais',
+      'Total Processos',
+      'Processos Ativos',
+      'Valor Total FOB',
+      'Lead Time Medio (dias)',
+      'Desvio Medio %',
+      'Score'
+    ]
+    sheet.add_row headers, style: styles[:header]
+
+    # Totalizadores
+    totais = {
+      processos: 0,
+      ativos: 0,
+      valor_fob: 0
+    }
+
+    # Dados
+    @dados.each do |fornecedor|
+      total_processos = fornecedor[:total_processos].to_i
+      processos_ativos = fornecedor[:processos_ativos].to_i
+      valor_fob = fornecedor[:valor_total_fob].to_f
+      lead_time = fornecedor[:lead_time_medio].to_f
+      desvio = fornecedor[:desvio_medio].to_f / 100.0
+      score = fornecedor[:score].to_f
+
+      totais[:processos] += total_processos
+      totais[:ativos] += processos_ativos
+      totais[:valor_fob] += valor_fob
+
+      sheet.add_row [
+        fornecedor[:nome],
+        fornecedor[:pais],
+        total_processos,
+        processos_ativos,
+        valor_fob,
+        lead_time,
+        desvio,
+        score
+      ], style: [
+        styles[:cell],
+        styles[:center],
+        styles[:integer],
+        styles[:integer],
+        styles[:currency_usd],
+        styles[:number],
+        desvio > 0.1 ? styles[:variacao_negativa] : (desvio < -0.05 ? styles[:variacao_positiva] : styles[:percent]),
+        styles[:number]
+      ]
+    end
+
+    # Linha de totais
+    sheet.add_row [
+      "TOTAL (#{@dados.count} fornecedores)",
+      '',
+      totais[:processos],
+      totais[:ativos],
+      totais[:valor_fob],
+      '', '', ''
+    ], style: [
+      styles[:total_text],
+      styles[:total_text],
+      styles[:total_integer],
+      styles[:total_integer],
+      styles[:total_currency],
+      styles[:total_text],
+      styles[:total_text],
+      styles[:total_text]
+    ]
+
+    # Ajustar largura das colunas
+    sheet.column_widths 35, 15, 15, 15, 18, 18, 15, 12
+  else
+    sheet.add_row ['Nenhum dado encontrado para os filtros selecionados.']
+  end
+end

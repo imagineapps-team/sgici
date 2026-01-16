@@ -12,6 +12,7 @@ puts "=" * 60
 seed_files = %w[
   feature_flags
   categorias_custo
+  menus_sgici
   dados_exemplo
 ]
 

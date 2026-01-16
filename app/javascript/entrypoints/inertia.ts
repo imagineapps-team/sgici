@@ -48,6 +48,10 @@ createInertiaApp({
       useDialogForErrorModal: true,
       preserveEqualProps: true,
     },
+    link: {
+      // Desabilitar prefetch global - evita requisicoes no hover
+      prefetch: false,
+    },
   },
 }).catch((error) => {
   // This ensures this entrypoint is only loaded on Inertia pages

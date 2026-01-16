@@ -1932,57 +1932,99 @@ end
 
 ---
 
+## Status de Implementação
+
+### Funcionalidades Implementadas (✅)
+
+| Módulo | Status | Detalhes |
+|--------|--------|----------|
+| **Processos de Importação** | ✅ 100% | CRUD + 5 transições + 6 status |
+| **Fornecedores** | ✅ 100% | CRUD + score + autocomplete |
+| **Prestadores de Serviço** | ✅ 100% | 6 tipos + CRUD + score |
+| **Custos Previstos** | ✅ 100% | CRUD + AJAX + cálculo impostos |
+| **Custos Reais** | ✅ 100% | CRUD + AJAX + pagamentos |
+| **Eventos Logísticos** | ✅ 100% | 9 tipos + rastreamento |
+| **Dashboard** | ✅ 100% | 6 KPIs + gráficos + alertas |
+| **Relatórios** | ✅ 80% | 3 relatórios (falta Excel/PDF) |
+| **Usuários** | ✅ 100% | CRUD + Devise + Perfis |
+| **Permissões** | ✅ 100% | Por menu |
+| **Categorias de Custo** | ✅ 100% | 7 grupos + flags |
+
+### Funcionalidades Pendentes (⏳)
+
+| Módulo | Prioridade | Estimativa |
+|--------|------------|------------|
+| **Exportação Excel** | Alta | Backend pronto, falta UI |
+| **Exportação PDF** | Alta | Requer Grover setup |
+| **Anexos de Documentos** | Média | Model existe, falta UI |
+| **Gestão de Ocorrências** | Média | Model existe, falta UI |
+| **Auditoria (UI)** | Baixa | AuditLog existe, falta UI |
+| **Notificações** | Baixa | Model existe, falta integração |
+
+---
+
 ## Próximos Passos
 
-### Prioridades para Q1 2025
+### Prioridades para Q1 2026
 
-1. **Completar API Mobile**
-   - [ ] Autenticação JWT completa
-   - [ ] Endpoints de reciclagem
-   - [ ] Sincronização offline
+1. **Exportação de Relatórios**
+   - [ ] Excel para relatório de processos
+   - [ ] Excel para relatório de custos
+   - [ ] Excel para relatório de fornecedores
+   - [ ] PDF com charts (Grover)
 
-2. **Relatórios**
-   - [ ] Excel para todos relatórios
-   - [ ] PDF com charts
-   - [ ] Agendamento de relatórios
+2. **Gestão Documental**
+   - [ ] UI para anexar documentos ao processo
+   - [ ] Visualização de anexos (preview)
+   - [ ] Tipos: Invoice, BL, AWB, DI, DUIMP
 
-3. **Performance**
-   - [ ] Implementar cache agressivo
-   - [ ] Otimizar queries N+1
-   - [ ] Index tuning
+3. **Ocorrências**
+   - [ ] CRUD de ocorrências no processo
+   - [ ] Tipos: Atraso, Avaria, Extravio, Inspeção
+   - [ ] Impacto: Alto, Médio, Baixo
 
-4. **Testes**
-   - [ ] Setup RSpec
-   - [ ] Testes de Models
-   - [ ] Testes de API
+4. **Integrações Futuras**
+   - [ ] API BCB (cotação PTAX)
+   - [ ] Rastreamento de containers (opcional)
+   - [ ] Siscomex (longo prazo)
 
-### Roadmap 2025
+### Roadmap 2026
 
 | Q1 | Q2 | Q3 | Q4 |
 |----|----|----|-----|
-| API Mobile | Track & Trace | BI Avançado | Blockchain |
-| Relatórios | Notificações Push | Geolocalização | Créditos de Carbono |
-| Testes | Monitoramento | - | - |
+| Exportações Excel/PDF | Anexos e Documentos | Ocorrências | Integrações |
+| Testes E2E | Notificações | Auditoria UI | API Mobile |
 
 ---
 
-## Glossário
+## Glossário SGICI
 
 | Termo | Definição |
 |-------|-----------|
-| **Ação** | Tipo de evento de coleta (ex: Coleta Seletiva, Doação) |
-| **Contrato** | Unidade consumidora vinculada a cliente |
-| **Evento** | Instância de uma ação em local e data específicos |
-| **Parceiro** | Entidade que recebe resíduos (cooperativas, empresas) |
-| **Reciclador** | Pessoa física que coleta resíduos |
-| **Reciclagem** | Registro de coleta de resíduo em evento |
-| **Recurso** | Tipo de resíduo coletado (PET, papel, vidro) |
-| **Tenant** | Banco de dados em arquitetura multi-tenant |
-| **Vigência** | Período de validade de relação reciclador-evento |
+| **PI** | Processo de Importação - documento principal do sistema |
+| **FOB** | Free On Board - preço da mercadoria + custos até embarque |
+| **CIF** | Cost, Insurance, Freight - preço FOB + frete + seguro |
+| **Incoterm** | International Commercial Terms - define responsabilidades |
+| **ETA** | Estimated Time of Arrival - previsão de chegada |
+| **DI** | Declaração de Importação - documento da Receita Federal |
+| **DUIMP** | Declaração Única de Importação - novo modelo Siscomex |
+| **NCM** | Nomenclatura Comum do Mercosul - código de classificação |
+| **II** | Imposto de Importação - imposto federal |
+| **IPI** | Imposto sobre Produtos Industrializados |
+| **PIS/COFINS** | Contribuições federais sobre importação |
+| **ICMS** | Imposto estadual sobre circulação |
+| **BL** | Bill of Lading - conhecimento de embarque marítimo |
+| **AWB** | Air Waybill - conhecimento de transporte aéreo |
+| **Freight Forwarder** | Agente de carga internacional |
+| **Despachante** | Profissional de desembaraço aduaneiro |
+| **Lead Time** | Tempo total do processo (embarque → entrega) |
+| **Desvio** | Diferença entre previsto e real (custo ou prazo) |
+| **Taxa de Câmbio** | Conversão moeda estrangeira → BRL |
+| **Modal** | Meio de transporte (marítimo, aéreo, rodoviário) |
 
 ---
 
-**Versão**: 1.0
-**Data**: 2025-01-15
-**Responsável**: Equipe Técnica AVSI
-**Revisão**: Anual ou sob demanda
+**Versão**: 1.1
+**Data**: 2026-01-16
+**Responsável**: Equipe Técnica SGICI
+**Revisão**: Atualizado com status de implementação

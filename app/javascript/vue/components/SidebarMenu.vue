@@ -37,26 +37,28 @@
                 class="ml-4 mt-1 space-y-1 border-l border-white/20 pl-4"
               >
                 <li v-for="child in item.children" :key="child.id">
-                  <Link
+                  <a
                     :href="child.href"
-                    class="flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors"
+                    class="flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors cursor-pointer"
                     :class="isActive(child.href)
                       ? 'bg-white/20 text-white'
                       : 'text-white/60 hover:bg-white/10 hover:text-white'"
+                    @click.prevent="navigateTo(child.href)"
                   >
                     {{ child.label }}
-                  </Link>
+                  </a>
                 </li>
               </ul>
             </template>
 
             <template v-else>
-              <Link
+              <a
                 :href="item.href"
-                class="flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                class="flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors cursor-pointer"
                 :class="isActive(item.href)
                   ? 'bg-white/20 text-white'
                   : 'text-white/70 hover:bg-white/10 hover:text-white'"
+                @click.prevent="navigateTo(item.href)"
               >
                 <component :is="getIcon(item.icon)" class="h-5 w-5" />
                 <span>{{ item.label }}</span>
@@ -66,7 +68,7 @@
                 >
                   {{ item.badge }}
                 </span>
-              </Link>
+              </a>
             </template>
           </li>
         </ul>
@@ -76,8 +78,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, type Component } from 'vue'
-import { Link, usePage } from '@inertiajs/vue3'
+import { ref, computed, onMounted, type Component } from 'vue'
+import { usePage, router } from '@inertiajs/vue3'
 import type { MenuSection, MenuItem } from '../types/navigation'
 import {
   HomeIcon,
@@ -107,6 +109,35 @@ const props = defineProps<Props>()
 const page = usePage()
 const expandedMenus = ref<Set<string>>(new Set())
 
+// Cachear currentPath para evitar re-renders desnecessarios
+const currentPath = computed(() => page.url)
+
+// Pre-calcular quais items estao ativos (evita recalculo no template)
+const activeItems = computed(() => {
+  const path = currentPath.value
+  const active = new Set<string>()
+
+  props.sections.forEach(section => {
+    section.items.forEach(item => {
+      if (checkActive(item.href, path)) {
+        active.add(item.href)
+      }
+      item.children?.forEach(child => {
+        if (checkActive(child.href, path)) {
+          active.add(child.href)
+        }
+      })
+    })
+  })
+
+  return active
+})
+
+function checkActive(href: string, path: string): boolean {
+  if (href === '/') return path === '/'
+  return path.startsWith(href)
+}
+
 const iconMap: Record<string, Component> = {
   home: HomeIcon,
   users: UsersIcon,
@@ -130,16 +161,12 @@ function getIcon(name?: string): Component {
 }
 
 function isActive(href: string): boolean {
-  const currentPath = page.url
-  if (href === '/') {
-    return currentPath === '/'
-  }
-  return currentPath.startsWith(href)
+  return activeItems.value.has(href)
 }
 
 function isParentActive(item: MenuItem): boolean {
-  if (isActive(item.href)) return true
-  return item.children?.some(child => isActive(child.href)) ?? false
+  if (activeItems.value.has(item.href)) return true
+  return item.children?.some(child => activeItems.value.has(child.href)) ?? false
 }
 
 function toggleSubmenu(id: string): void {
@@ -150,11 +177,20 @@ function toggleSubmenu(id: string): void {
   }
 }
 
+function navigateTo(href: string): void {
+  router.visit(href)
+}
+
 onMounted(() => {
+  // Expandir submenus que contem item ativo
+  const path = page.url
   props.sections.forEach(section => {
     section.items.forEach(item => {
-      if (item.children?.length && isParentActive(item)) {
-        expandedMenus.value.add(item.id)
+      if (item.children?.length) {
+        const hasActiveChild = item.children.some(child => checkActive(child.href, path))
+        if (hasActiveChild || checkActive(item.href, path)) {
+          expandedMenus.value.add(item.id)
+        }
       }
     })
   })

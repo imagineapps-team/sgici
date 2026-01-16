@@ -1,0 +1,90 @@
+# frozen_string_literal: true
+# Template Excel para Analise de Custos
+
+wb = xlsx_package.workbook
+styles = create_excel_styles(wb)
+
+wb.add_worksheet(name: 'Analise de Custos') do |sheet|
+  # Titulo
+  sheet.add_row ['Analise de Custos - Previsto vs Real'], style: styles[:title]
+  sheet.merge_cells('A1:E1')
+  sheet.add_row ["Gerado em: #{Time.current.strftime('%d/%m/%Y as %H:%M')}"], style: styles[:subtitle]
+  if @periodo.present?
+    sheet.add_row ["Periodo: #{@periodo[:inicio].strftime('%d/%m/%Y')} a #{@periodo[:fim].strftime('%d/%m/%Y')}"], style: styles[:subtitle]
+  end
+  sheet.add_row [] # Linha vazia
+
+  if @dados.present?
+    # Headers
+    headers = [
+      'Categoria',
+      'Previsto (R$)',
+      'Real (R$)',
+      'Variacao (R$)',
+      'Variacao %'
+    ]
+    sheet.add_row headers, style: styles[:header]
+
+    # Totalizadores
+    totais = {
+      previsto: 0,
+      real: 0
+    }
+
+    # Dados
+    @dados.each do |item|
+      previsto = item[:previsto].to_f
+      real = item[:real].to_f
+      variacao_valor = real - previsto
+      variacao_pct = item[:variacao].to_f / 100.0
+
+      totais[:previsto] += previsto
+      totais[:real] += real
+
+      variacao_style = if variacao_pct > 0.1
+        styles[:variacao_negativa]
+      elsif variacao_pct < -0.05
+        styles[:variacao_positiva]
+      else
+        styles[:percent]
+      end
+
+      sheet.add_row [
+        item[:categoria],
+        previsto,
+        real,
+        variacao_valor,
+        variacao_pct
+      ], style: [
+        styles[:cell],
+        styles[:currency_brl],
+        styles[:currency_brl],
+        variacao_valor > 0 ? styles[:variacao_negativa] : styles[:variacao_positiva],
+        variacao_style
+      ]
+    end
+
+    # Linha de totais
+    variacao_total = totais[:real] - totais[:previsto]
+    variacao_pct_total = totais[:previsto].positive? ? variacao_total / totais[:previsto] : 0
+
+    sheet.add_row [
+      'TOTAL',
+      totais[:previsto],
+      totais[:real],
+      variacao_total,
+      variacao_pct_total
+    ], style: [
+      styles[:total_text],
+      styles[:total_currency],
+      styles[:total_currency],
+      variacao_total > 0 ? styles[:variacao_negativa] : styles[:total_currency],
+      styles[:total]
+    ]
+
+    # Ajustar largura das colunas
+    sheet.column_widths 35, 18, 18, 18, 15
+  else
+    sheet.add_row ['Nenhum dado encontrado para os filtros selecionados.']
+  end
+end

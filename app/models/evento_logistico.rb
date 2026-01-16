@@ -44,6 +44,7 @@ class EventoLogistico < ApplicationRecord
   # Fontes de dados
   FONTES = {
     'manual' => 'Manual',
+    'sistema' => 'Sistema (Automático)',
     'api_armador' => 'API Armador',
     'api_cia_aerea' => 'API Cia Aérea',
     'siscomex' => 'Siscomex'

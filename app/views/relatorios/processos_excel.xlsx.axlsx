@@ -1,0 +1,106 @@
+# frozen_string_literal: true
+# Template Excel para Relatorio de Processos de Importacao
+
+wb = xlsx_package.workbook
+styles = create_excel_styles(wb)
+
+wb.add_worksheet(name: 'Processos de Importacao') do |sheet|
+  # Titulo
+  sheet.add_row ['Relatorio de Processos de Importacao'], style: styles[:title]
+  sheet.merge_cells('A1:H1')
+  sheet.add_row ["Gerado em: #{Time.current.strftime('%d/%m/%Y as %H:%M')}"], style: styles[:subtitle]
+  if @periodo.present?
+    sheet.add_row ["Periodo: #{@periodo[:inicio].strftime('%d/%m/%Y')} a #{@periodo[:fim].strftime('%d/%m/%Y')}"], style: styles[:subtitle]
+  end
+  sheet.add_row [] # Linha vazia
+
+  if @dados.present?
+    # Headers
+    headers = [
+      'Numero',
+      'Fornecedor',
+      'Status',
+      'Modal',
+      'Valor FOB',
+      'Custo Previsto',
+      'Custo Real',
+      'Desvio %',
+      'Lead Time',
+      'Criado Em'
+    ]
+    sheet.add_row headers, style: styles[:header]
+
+    # Totalizadores
+    totais = {
+      valor_fob: 0,
+      custo_previsto: 0,
+      custo_real: 0,
+      count: 0
+    }
+
+    # Dados
+    @dados.each do |processo|
+      valor_fob = processo[:valor_fob].to_f
+      custo_previsto = processo[:custo_previsto_total].to_f
+      custo_real = processo[:custo_real_total].to_f
+      desvio = processo[:desvio_percentual].to_f / 100.0
+
+      totais[:valor_fob] += valor_fob
+      totais[:custo_previsto] += custo_previsto
+      totais[:custo_real] += custo_real
+      totais[:count] += 1
+
+      sheet.add_row [
+        processo[:numero],
+        processo[:fornecedor],
+        processo[:status_label],
+        processo[:modal_label],
+        valor_fob,
+        custo_previsto,
+        custo_real,
+        desvio,
+        processo[:lead_time_dias],
+        processo[:created_at]
+      ], style: [
+        styles[:cell],
+        styles[:cell],
+        styles[:center],
+        styles[:center],
+        styles[:currency_usd],
+        styles[:currency_brl],
+        styles[:currency_brl],
+        desvio > 0.1 ? styles[:variacao_negativa] : (desvio < -0.05 ? styles[:variacao_positiva] : styles[:percent]),
+        styles[:integer],
+        styles[:date]
+      ]
+    end
+
+    # Linha de totais
+    desvio_total = totais[:custo_previsto].positive? ? (totais[:custo_real] - totais[:custo_previsto]) / totais[:custo_previsto] : 0
+    sheet.add_row [
+      "TOTAL (#{totais[:count]} processos)",
+      '', '', '',
+      totais[:valor_fob],
+      totais[:custo_previsto],
+      totais[:custo_real],
+      desvio_total,
+      '', ''
+    ], style: [
+      styles[:total_text],
+      styles[:total_text],
+      styles[:total_text],
+      styles[:total_text],
+      styles[:total_currency],
+      styles[:total_currency],
+      styles[:total_currency],
+      styles[:total],
+      styles[:total_text],
+      styles[:total_text]
+    ]
+
+    # Ajustar largura das colunas
+    sheet.column_widths 15, 30, 15, 12, 15, 18, 18, 12, 12, 15
+  else
+    sheet.add_row ['Nenhum dado encontrado para os filtros selecionados.']
+  end
+end

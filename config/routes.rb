@@ -78,6 +78,96 @@ Rails.application.routes.draw do
   get 'dashboard/por_categoria', to: 'dashboard#por_categoria'
   get 'dashboard/evolucao', to: 'dashboard#evolucao'
 
+  # =====================================================
+  # SGICI - Sistema de Gestao de Importacoes
+  # =====================================================
+
+  # Processos de Importacao
+  resources :processos_importacao do
+    member do
+      post :aprovar        # planejado -> aprovado
+      post :transitar      # aprovado -> em_transito
+      post :desembaracar   # em_transito -> desembaracado
+      post :finalizar      # desembaracado -> finalizado
+      post :cancelar       # qualquer -> cancelado
+    end
+    collection do
+      get :autocomplete_fornecedores
+      get :autocomplete_responsaveis
+    end
+
+    # Anexos do processo
+    resources :anexos, only: [:index, :show, :create, :destroy]
+
+    # Custos Previstos (AJAX endpoints)
+    resources :custos_previstos, only: [] do
+      collection do
+        get :ajax_list
+        post :ajax_create
+        post :calcular_impostos
+        post :gerar_impostos
+        get :categorias_disponiveis
+      end
+      member do
+        patch :ajax_update
+        delete :ajax_destroy
+      end
+    end
+
+    # Custos Reais (AJAX endpoints)
+    resources :custos_reais, only: [] do
+      collection do
+        get :ajax_list
+        post :ajax_create
+        get :categorias_disponiveis
+      end
+      member do
+        patch :ajax_update
+        delete :ajax_destroy
+        post :registrar_pagamento
+      end
+    end
+  end
+
+  # Custos (standalone)
+  resources :custos_previstos
+  resources :custos_reais
+
+  # Eventos Logisticos
+  resources :eventos_logisticos, only: [:index, :show, :create, :destroy]
+
+  # Ocorrencias
+  resources :ocorrencias do
+    member do
+      post :iniciar_analise
+      post :resolver
+      post :cancelar
+    end
+
+    # Anexos da ocorrencia
+    resources :anexos, only: [:index, :show, :create, :destroy]
+  end
+
+  # Cadastros SGICI
+  resources :fornecedores do
+    member do
+      get :processos
+      get :estatisticas
+    end
+  end
+
+  resources :prestadores_servico do
+    collection do
+      get :por_tipo
+    end
+  end
+
+  resources :categorias_custo
+
+  # =====================================================
+  # Rotas legadas (manter para referencia)
+  # =====================================================
+
   resources :contratos do
     member do
       delete :remove_cliente
@@ -162,50 +252,18 @@ Rails.application.routes.draw do
   resources :usuarios
   resources :permissoes_menu, only: [:index, :edit, :update]
 
-  # Relatórios
+  # Relatórios SGICI
   resources :relatorios, only: [:index] do
     collection do
-      # Histórico por Ação
-      get 'historico_eventos', to: 'relatorios#historico_eventos'
-      post 'historico_eventos/data', to: 'relatorios#historico_eventos_data'
-      get 'historico_eventos/excel', to: 'relatorios#historico_eventos_excel'
-      get 'historico_eventos/pdf', to: 'relatorios#historico_eventos_pdf'
-
-      # Histórico por Participação
-      get 'historico_participacao', to: 'relatorios#historico_participacao'
-      post 'historico_participacao/data', to: 'relatorios#historico_participacao_data'
-      get 'historico_participacao/excel', to: 'relatorios#historico_participacao_excel'
-      get 'historico_participacao/pdf', to: 'relatorios#historico_participacao_pdf'
-
-      # Histórico de Resíduos
-      get 'historico_residuos', to: 'relatorios#historico_residuos'
-      post 'historico_residuos/data', to: 'relatorios#historico_residuos_data'
-      get 'historico_residuos/excel', to: 'relatorios#historico_residuos_excel'
-      get 'historico_residuos/pdf', to: 'relatorios#historico_residuos_pdf'
-
-      # Histórico Reciclador por Evento
-      get 'historico_reciclador_evento', to: 'relatorios#historico_reciclador_evento'
-      post 'historico_reciclador_evento/data', to: 'relatorios#historico_reciclador_evento_data'
-      get 'historico_reciclador_evento/excel', to: 'relatorios#historico_reciclador_evento_excel'
-      get 'historico_reciclador_evento/pdf', to: 'relatorios#historico_reciclador_evento_pdf'
-
-      # Fatura do Reciclador
-      get 'historico_fatura_reciclador', to: 'relatorios#historico_fatura_reciclador'
-      post 'historico_fatura_reciclador/data', to: 'relatorios#historico_fatura_reciclador_data'
-      get 'historico_fatura_reciclador/excel', to: 'relatorios#historico_fatura_reciclador_excel'
-      get 'historico_fatura_reciclador/pdf', to: 'relatorios#historico_fatura_reciclador_pdf'
-
-      # Campanhas
-      get 'campanhas', to: 'relatorios#campanhas', as: :relatorio_campanhas
-      post 'campanhas/data', to: 'relatorios#campanhas_data'
-      get 'campanhas/excel', to: 'relatorios#campanhas_excel'
-      get 'campanhas/pdf', to: 'relatorios#campanhas_pdf'
-
-      # Veiculos
-      get 'veiculos', to: 'relatorios#veiculos', as: :relatorio_veiculos
-      post 'veiculos/data', to: 'relatorios#veiculos_data'
-      get 'veiculos/excel', to: 'relatorios#veiculos_excel'
-      get 'veiculos/pdf', to: 'relatorios#veiculos_pdf'
+      get 'processos'
+      post 'processos/data', to: 'relatorios#processos_data'
+      get 'processos/excel', to: 'relatorios#processos_excel', defaults: { format: :xlsx }
+      get 'custos'
+      post 'custos/data', to: 'relatorios#custos_data'
+      get 'custos/excel', to: 'relatorios#custos_excel', defaults: { format: :xlsx }
+      get 'fornecedores'
+      post 'fornecedores/data', to: 'relatorios#fornecedores_data'
+      get 'fornecedores/excel', to: 'relatorios#fornecedores_excel', defaults: { format: :xlsx }
     end
   end
 

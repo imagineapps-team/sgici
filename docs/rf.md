@@ -5,23 +5,28 @@
 
 ## Sumário
 
-| ID | Nome | Prioridade | Status | Perfil |
-|----|------|------------|--------|--------|
-| RF001 | Cadastro de Processos de Importação | Alta | MVP | Operacional |
-| RF002 | Planejamento e Simulação de Custos | Alta | MVP | Operacional |
-| RF003 | Cadastro de Fornecedores e Prestadores | Alta | MVP | Admin/Operacional |
-| RF004 | Acompanhamento Logístico | Alta | MVP | Operacional |
-| RF005 | Lançamento de Custos Reais | Alta | MVP | Operacional |
-| RF006 | Comparação Previsto × Real | Alta | MVP | Operacional/Gestor |
-| RF007 | Fechamento do Processo | Alta | MVP | Operacional |
-| RF008 | Dashboards e Indicadores | Alta | MVP | Gestor |
-| RF009 | Exportação de Dados | Média | MVP | Gestor |
-| RF010 | Anexação de Documentos | Média | Pós-MVP | Operacional |
-| RF011 | Aprovação de Processos Planejados | Média | MVP | Gestor |
-| RF012 | Gestão de Ocorrências | Média | MVP | Operacional |
-| RF013 | Gestão de Usuários e Perfis | Alta | MVP | Admin |
-| RF014 | Auditoria de Modificações | Média | MVP | Admin/Gestor |
-| RF015 | Notificações Automáticas | Baixa | Pós-MVP | Sistema |
+| ID | Nome | Prioridade | Implementado | Observações |
+|----|------|------------|--------------|-------------|
+| RF001 | Cadastro de Processos de Importação | Alta | ✅ Completo | CRUD + 6 status + validações |
+| RF002 | Planejamento e Simulação de Custos | Alta | ✅ Completo | Cálculo automático de impostos |
+| RF003 | Cadastro de Fornecedores e Prestadores | Alta | ✅ Completo | 2 CRUDs com score |
+| RF004 | Acompanhamento Logístico | Alta | ✅ Completo | 9 tipos de eventos |
+| RF005 | Lançamento de Custos Reais | Alta | ✅ Completo | AJAX + status pagamento |
+| RF006 | Comparação Previsto × Real | Alta | ✅ Completo | Desvio automático |
+| RF007 | Fechamento do Processo | Alta | ✅ Completo | 5 transições + bloqueio |
+| RF008 | Dashboards e Indicadores | Alta | ✅ Completo | 6 KPIs + gráficos |
+| RF009 | Exportação de Dados | Média | ❌ Pendente | Excel/PDF não implementado |
+| RF010 | Anexação de Documentos | Média | ⚠️ Parcial | Model existe, falta UI |
+| RF011 | Aprovação de Processos Planejados | Média | ✅ Completo | Transição aprovar |
+| RF012 | Gestão de Ocorrências | Média | ⚠️ Parcial | Model existe, falta UI |
+| RF013 | Gestão de Usuários e Perfis | Alta | ✅ Completo | CRUD + Devise |
+| RF014 | Auditoria de Modificações | Média | ⚠️ Parcial | AuditLog existe, falta UI |
+| RF015 | Notificações Automáticas | Baixa | ❌ Pendente | Model existe, sem integração |
+
+### Legenda
+- ✅ Completo: Funcionalidade totalmente implementada e testável
+- ⚠️ Parcial: Backend implementado, falta interface ou integração
+- ❌ Pendente: Não implementado ou apenas planejado
 
 ---
 
